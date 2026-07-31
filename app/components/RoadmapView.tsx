@@ -6,13 +6,17 @@ import {
   CalendarRange,
   CheckCircle2,
   Clock3,
+  Flag,
   List,
+  PlayCircle,
   Route,
   Sparkles,
+  Trophy,
 } from "lucide-react";
-import type { PlaylistStudyProject, StudySession } from "../../lib/playlist-study";
+import type { PlaylistStudyProject, StudySession, StudyVideo } from "../../lib/playlist-study";
+import { formatDuration } from "../../lib/playlist-study";
 
-type Frame = "day" | "week" | "month";
+type Frame = "journey" | "day" | "week" | "month";
 
 function dateAtNoon(value: string) {
   return new Date(`${value}T12:00:00`);
@@ -51,8 +55,8 @@ function durationLabel(seconds: number) {
   return hours ? `${hours}h ${minutes}m` : `${minutes}m`;
 }
 
-export default function RoadmapView({ project }: { project: PlaylistStudyProject }) {
-  const [frame, setFrame] = useState<Frame>("week");
+export default function RoadmapView({ project, onOpenVideo }: { project: PlaylistStudyProject; onOpenVideo: (video: StudyVideo) => void }) {
+  const [frame, setFrame] = useState<Frame>("journey");
   const sessions = project.sessions;
   const totalWatchSeconds = sessions.reduce((sum, session) => sum + watchSeconds(session), 0);
 
@@ -73,6 +77,24 @@ export default function RoadmapView({ project }: { project: PlaylistStudyProject
     });
     return Array.from(grouped.entries()).map(([key, items]) => ({ key, items }));
   }, [sessions]);
+
+  const topicLevels = useMemo(() => {
+    const priorityRank = (topic: string) => {
+      const rank = project.policy.priorities.findIndex((priority) => priority === topic);
+      return rank < 0 ? 100 : rank;
+    };
+    return Array.from(new Set(project.videos.map((video) => video.topic)))
+      .sort((left, right) => priorityRank(left) - priorityRank(right))
+      .map((topic, index) => ({
+        topic,
+        index,
+        videos: project.videos.filter((video) => video.topic === topic),
+      }));
+  }, [project.policy.priorities, project.videos]);
+
+  function videoFor(id: string) {
+    return project.videos.find((video) => video.id === id);
+  }
 
   return (
     <section className="tab-panel roadmap-view">
@@ -95,11 +117,39 @@ export default function RoadmapView({ project }: { project: PlaylistStudyProject
           <h3>Full plan, three useful frames</h3>
         </div>
         <div className="frame-switcher" role="tablist" aria-label="Roadmap timeframe">
+          <button className={frame === "journey" ? "active" : ""} onClick={() => setFrame("journey")} role="tab" aria-selected={frame === "journey"}><Trophy size={15} />Path</button>
           <button className={frame === "day" ? "active" : ""} onClick={() => setFrame("day")} role="tab" aria-selected={frame === "day"}><List size={15} />Day</button>
           <button className={frame === "week" ? "active" : ""} onClick={() => setFrame("week")} role="tab" aria-selected={frame === "week"}><CalendarRange size={15} />Week</button>
           <button className={frame === "month" ? "active" : ""} onClick={() => setFrame("month")} role="tab" aria-selected={frame === "month"}><CalendarDays size={15} />Month</button>
         </div>
       </div>
+
+      {frame === "journey" && (
+        <div className="learning-path frame-panel">
+          <div className="path-start"><span><Flag size={18} /></span><div><small>START HERE</small><strong>{project.policy.priorities[0] || "Playlist foundations"}</strong></div></div>
+          {topicLevels.map((level) => {
+            const completed = level.videos.filter((video) => video.watched).length;
+            return <article className="path-level" key={level.topic}>
+              <div className="level-heading"><span>LEVEL {level.index + 1}</span><div><h3>{level.topic}</h3><small>{completed} of {level.videos.length} completed</small></div><strong>{level.videos.length ? Math.round((completed / level.videos.length) * 100) : 0}%</strong></div>
+              <div className="path-track">
+                {level.videos.map((video, index) => {
+                  const needsNote = video.watched && !video.note.trim();
+                  const ready = !video.watched && (index === 0 || level.videos[index - 1]?.watched);
+                  const state = video.watched ? (needsNote ? "needs-note" : "complete") : ready ? "ready" : "upcoming";
+                  return <button className={`path-node ${state}`} type="button" key={video.id} onClick={() => onOpenVideo(video)} aria-label={`Open episode ${video.index}: ${video.title}`}>
+                    <span>{video.watched ? <CheckCircle2 size={19} /> : <PlayCircle size={19} />}</span>
+                    <small>EP {String(video.index).padStart(3, "0")}</small>
+                    <strong>{video.title}</strong>
+                    <em>{formatDuration(video.durationSeconds)}</em>
+                    <i>{state === "complete" ? "Mastered" : state === "needs-note" ? "Add note" : state === "ready" ? "Ready now" : "Upcoming"}</i>
+                  </button>;
+                })}
+              </div>
+            </article>;
+          })}
+          {!topicLevels.length && <article className="path-empty"><Trophy size={25} /><h3>Your learning path is being mapped</h3><p>Verified episodes become interactive nodes after playlist analysis.</p></article>}
+        </div>
+      )}
 
       {frame === "day" && (
         <div className="day-roadmap frame-panel">
@@ -108,7 +158,7 @@ export default function RoadmapView({ project }: { project: PlaylistStudyProject
               <div className="roadmap-day-index"><span>{String(index + 1).padStart(2, "0")}</span><i /></div>
               <div className="roadmap-date"><strong>{longDate(session.date)}</strong><span>{session.date}</span></div>
               <div className="roadmap-module"><strong>{session.module ?? "Playlist study"}</strong><span>{session.videoIds.length} video{session.videoIds.length === 1 ? "" : "s"}</span></div>
-              <div className="episode-chips">{session.videoIds.map((id) => <span key={id}>{episodeNumber(id)}</span>)}</div>
+              <div className="episode-chips">{session.videoIds.map((id) => { const video = videoFor(id); return video ? <button type="button" key={id} onClick={() => onOpenVideo(video)} aria-label={`Open episode ${video.index}`}>{episodeNumber(id)}</button> : <span key={id}>{episodeNumber(id)}</span>; })}</div>
               <div className="roadmap-duration"><Clock3 size={14} /><strong>{durationLabel(watchSeconds(session))}</strong></div>
             </article>
           ))}

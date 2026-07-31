@@ -14,9 +14,11 @@ schema version is `1`.
 | `status` | `planning`, `active`, `paused`, or `complete`. |
 | `totalVideoCount`, `totalDurationSeconds` | Verified inventory totals. |
 | `policy` | Timezone, capacities, excluded days, priorities, and splitting rule. |
-| `videos` | Verified episode inventory plus watched, practiced, and note state. |
+| `videos` | Verified episode inventory plus watched timestamp, practiced, note, transcript, and optional AI artifact state. |
 | `sessions` | Current date-by-date plan. |
 | `calendar` | Provider, target calendar, sync status, and pending-change count. |
+| `notificationPreferences` | Opt-in in-app/email reminder policy; contains no mail credentials. |
+| `notifications` | Durable in-app notification inbox and read state. |
 | `updatedAt` | ISO-8601 last-modified timestamp. |
 
 The TypeScript definition is in `lib/playlist-study.ts`.
@@ -27,6 +29,10 @@ The TypeScript definition is in `lib/playlist-study.ts`.
   imported.
 - Exported JSON is the portable handoff format for the Codex skill.
 - Checked `videos[].watched` values are the source of truth for replanning.
+- `videos[].watchedAt` is the source of truth for activity reports and streaks.
+- AI provider keys are request-scoped and never belong in this contract.
+- AI output is stored in `videos[].aiArtifacts`; a learner's `note` remains
+  independent unless they explicitly append generated material.
 - Past Calendar events remain history. Only future playlist events are replaced.
 - A skill must preserve unknown fields so newer app versions remain compatible.
 - Playlist metadata must be verified from YouTube; never invent titles or

@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import {
+  BarChart3,
   Bell,
   ChevronDown,
   CircleHelp,
@@ -17,7 +18,10 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import GuideView from "./components/GuideView";
+import NotificationCenter from "./components/NotificationCenter";
+import ReportsView from "./components/ReportsView";
 import RoadmapView from "./components/RoadmapView";
+import VideoWorkspace from "./components/VideoWorkspace";
 import {
   buildSkillRequest,
   completedCount,
@@ -29,14 +33,16 @@ import {
 } from "../lib/playlist-study";
 
 type SaveState = "saved" | "saving" | "preview";
-type AppTab = "today" | "roadmap" | "playlists" | "notes" | "guide";
+type AppTab = "today" | "roadmap" | "playlists" | "notes" | "reports" | "guide" | "video";
 
 const tabCopy: Record<AppTab, { eyebrow: string; title: string }> = {
   today: { eyebrow: "Your next focused session", title: "Good afternoon, Faraz." },
   roadmap: { eyebrow: "Day · week · month", title: "See the whole road ahead." },
   playlists: { eyebrow: "Your learning library", title: "Every playlist, one system." },
   notes: { eyebrow: "Your knowledge archive", title: "Turn watching into recall." },
+  reports: { eyebrow: "Progress you can act on", title: "See how your learning compounds." },
   guide: { eyebrow: "A five-step workflow", title: "Learn how to use Plateful." },
+  video: { eyebrow: "Video learning cockpit", title: "Watch, understand, and remember." },
 };
 
 function cloneSample(): PlaylistStudyProject {
@@ -61,6 +67,9 @@ export default function StudyApp() {
   const [showReplan, setShowReplan] = useState(false);
   const [notice, setNotice] = useState("");
   const [activeTab, setActiveTab] = useState<AppTab>("today");
+  const [previousTab, setPreviousTab] = useState<AppTab>("today");
+  const [selectedVideoId, setSelectedVideoId] = useState<string | null>(null);
+  const [showNotifications, setShowNotifications] = useState(false);
 
   const project =
     projects.find((candidate) => candidate.id === selectedId) ?? projects[0];
@@ -72,6 +81,10 @@ export default function StudyApp() {
   const progress = project.totalVideoCount
     ? Math.round((finished / project.totalVideoCount) * 100)
     : 0;
+  const selectedVideo = selectedVideoId
+    ? project.videos.find((video) => video.id === selectedVideoId) ?? null
+    : null;
+  const unreadNotifications = (project.notifications || []).filter((item) => !item.read).length;
 
   const topics = useMemo(() => {
     const names = Array.from(new Set(project.videos.map((video) => video.topic)));
@@ -126,6 +139,9 @@ export default function StudyApp() {
   }
 
   function toggleWatched(videoId: string) {
+    const currentVideo = project.videos.find((video) => video.id === videoId);
+    const completing = !currentVideo?.watched;
+    const completedAt = new Date().toISOString();
     const next: PlaylistStudyProject = {
       ...project,
       updatedAt: new Date().toISOString(),
@@ -135,10 +151,58 @@ export default function StudyApp() {
         pendingChangeCount: Math.max(1, project.calendar.pendingChangeCount + 1),
       },
       videos: project.videos.map((video) =>
-        video.id === videoId ? { ...video, watched: !video.watched } : video,
+        video.id === videoId ? { ...video, watched: !video.watched, watchedAt: completing ? completedAt : null } : video,
       ),
+      notifications: completing && currentVideo
+        ? [
+            {
+              id: `note-${videoId}-${completedAt}`,
+              kind: "note",
+              title: `Episode ${currentVideo.index} completed`,
+              message: currentVideo.note.trim() ? "Great work—your note is already attached." : "Add a short personal note while the ideas are fresh.",
+              createdAt: completedAt,
+              read: false,
+              videoId,
+            },
+            ...(project.notifications || []),
+          ]
+        : project.notifications,
     };
     replaceProject(next);
+  }
+
+  function saveVideo(nextVideo: StudyVideo) {
+    const savedAt = new Date().toISOString();
+    replaceProject({
+      ...project,
+      videos: project.videos.map((video) => video.id === nextVideo.id ? nextVideo : video),
+      updatedAt: savedAt,
+      notifications: nextVideo.aiArtifacts && !project.videos.find((video) => video.id === nextVideo.id)?.aiArtifacts
+        ? [{ id: `ai-${nextVideo.id}-${savedAt}`, kind: "ai", title: "AI study pack ready", message: `Summary, notes, and mind map created for episode ${nextVideo.index}.`, createdAt: savedAt, read: false, videoId: nextVideo.id }, ...(project.notifications || [])]
+        : project.notifications,
+    });
+  }
+
+  function openVideo(video: StudyVideo) {
+    if (activeTab !== "video") setPreviousTab(activeTab);
+    setSelectedVideoId(video.id);
+    setActiveTab("video");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function leaveVideo() {
+    setActiveTab(previousTab === "video" ? "today" : previousTab);
+    setSelectedVideoId(null);
+  }
+
+  function navigateFromNotification(target?: string, videoId?: string) {
+    setShowNotifications(false);
+    if (videoId) {
+      const video = project.videos.find((item) => item.id === videoId);
+      if (video) openVideo(video);
+      return;
+    }
+    if (target && ["today", "roadmap", "reports"].includes(target)) setActiveTab(target as AppTab);
   }
 
   function openNote(video: StudyVideo) {
@@ -219,6 +283,14 @@ export default function StudyApp() {
         pendingChangeCount: 0,
         lastSyncedAt: null,
       },
+      notificationPreferences: {
+        inApp: true,
+        email: false,
+        emailAddress: "",
+        leadMinutes: 30,
+        dailyDigest: true,
+      },
+      notifications: [],
       updatedAt: new Date().toISOString(),
     };
     replaceProject(next);
@@ -239,6 +311,7 @@ export default function StudyApp() {
           <button className={`nav-item ${activeTab === "roadmap" ? "active" : ""}`} type="button" onClick={() => setActiveTab("roadmap")}><Route size={17} />Roadmap</button>
           <button className={`nav-item ${activeTab === "playlists" ? "active" : ""}`} type="button" onClick={() => setActiveTab("playlists")}><Library size={17} />Playlists</button>
           <button className={`nav-item ${activeTab === "notes" ? "active" : ""}`} type="button" onClick={() => setActiveTab("notes")}><NotebookPen size={17} />Notes</button>
+          <button className={`nav-item ${activeTab === "reports" ? "active" : ""}`} type="button" onClick={() => setActiveTab("reports")}><BarChart3 size={17} />Reports</button>
           <button className={`nav-item ${activeTab === "guide" ? "active" : ""}`} type="button" onClick={() => setActiveTab("guide")}><CircleHelp size={17} />How to use</button>
         </nav>
         <div className="sidebar-bottom">
@@ -255,7 +328,7 @@ export default function StudyApp() {
           </div>
           <div className="top-actions">
             <span className={`save-state ${saveState}`}>{saveState === "saved" ? "Saved" : saveState === "saving" ? "Saving…" : "Preview data"}</span>
-            <button className="icon-button" aria-label="Notifications" type="button"><Bell size={17} /></button>
+            <button className="icon-button notification-trigger" aria-label={`Notifications${unreadNotifications ? `, ${unreadNotifications} unread` : ""}`} type="button" onClick={() => setShowNotifications(true)}><Bell size={17} />{unreadNotifications > 0 && <span>{unreadNotifications}</span>}</button>
             <button className="primary-button button-with-icon" type="button" onClick={() => setShowAdd(true)}><Plus size={16} />Add playlist</button>
           </div>
         </header>
@@ -294,11 +367,11 @@ export default function StudyApp() {
                   {sessionVideos.map((video) => (
                     <div className={`video-row ${video.watched ? "done" : ""}`} key={video.id}>
                       <button className="check-button" aria-label={`Mark episode ${video.index} ${video.watched ? "not watched" : "watched"}`} type="button" onClick={() => toggleWatched(video.id)}>{video.watched ? "✓" : ""}</button>
-                      <a className="episode-number" href={video.url} target="_blank" rel="noreferrer">{String(video.index).padStart(3, "0")}</a>
-                      <div className="video-copy"><strong>{video.title}</strong><span>{video.topic} · {formatDuration(video.durationSeconds)}</span></div>
+                      <button className="episode-number" type="button" onClick={() => openVideo(video)}>{String(video.index).padStart(3, "0")}</button>
+                      <button className="video-copy video-open-copy" type="button" onClick={() => openVideo(video)}><strong>{video.title}</strong><span>{video.topic} · {formatDuration(video.durationSeconds)}</span></button>
                       {video.note && <span className="note-dot" title="Notes added">●</span>}
                       <button className="text-button" type="button" onClick={() => openNote(video)}>{video.note ? "Edit note" : "Add note"}</button>
-                      <a className="play-button" href={video.url} target="_blank" rel="noreferrer" aria-label={`Watch episode ${video.index}`}><Play size={12} fill="currentColor" /></a>
+                      <button className="play-button" type="button" onClick={() => openVideo(video)} aria-label={`Open episode ${video.index}`}><Play size={12} fill="currentColor" /></button>
                     </div>
                   ))}
                 </div>
@@ -357,7 +430,7 @@ export default function StudyApp() {
           </aside>
         </div>}
 
-        {activeTab === "roadmap" && <RoadmapView project={project} />}
+        {activeTab === "roadmap" && <RoadmapView project={project} onOpenVideo={openVideo} />}
 
         {activeTab === "playlists" && (
           <section className="tab-panel library-view">
@@ -378,14 +451,18 @@ export default function StudyApp() {
             <div className="panel-intro"><div><p className="eyebrow">Episode notes</p><h2>Your searchable learning trail</h2><p>Review what each episode taught you, then fill the gaps while the idea is still fresh.</p></div><button className="secondary-button button-with-icon" type="button" onClick={exportProject}><FileDown size={15} />Export project</button></div>
             <div className="notes-summary"><div><strong>{project.videos.filter((video) => video.note.trim()).length}</strong><span>notes written</span></div><div><strong>{project.videos.filter((video) => video.watched).length}</strong><span>videos watched</span></div><div><strong>{project.videos.filter((video) => video.watched && !video.note.trim()).length}</strong><span>notes to complete</span></div></div>
             <div className="notes-list">
-              {project.videos.map((video) => <button className="note-list-row" type="button" key={video.id} onClick={() => openNote(video)}><span className={`note-status ${video.note.trim() ? "has-note" : ""}`}><NotebookPen size={16} /></span><span className="note-list-copy"><small>Episode {String(video.index).padStart(3, "0")} · {video.topic}</small><strong>{video.title}</strong><p>{video.note.trim() ? video.note.replace(/^#+\s*/gm, "").slice(0, 130) : "No note yet. Add 3–5 ideas, one command you tried, and one remaining question."}</p></span><span className="note-list-action">{video.note.trim() ? "Edit" : "Add note"}<ExternalLink size={13} /></span></button>)}
+              {project.videos.map((video) => <button className="note-list-row" type="button" key={video.id} onClick={() => openVideo(video)}><span className={`note-status ${video.note.trim() ? "has-note" : ""}`}><NotebookPen size={16} /></span><span className="note-list-copy"><small>Episode {String(video.index).padStart(3, "0")} · {video.topic}</small><strong>{video.title}</strong><p>{video.note.trim() ? video.note.replace(/^#+\s*/gm, "").slice(0, 130) : "No note yet. Add 3–5 ideas, one command you tried, and one remaining question."}</p></span><span className="note-list-action">Open workspace<ExternalLink size={13} /></span></button>)}
               {!project.videos.length && <article className="empty-card"><span className="empty-mark"><NotebookPen size={24} /></span><h2>Notes begin after planning</h2><p>Once the playlist inventory is verified, every episode gets a dedicated note entry here.</p></article>}
             </div>
           </section>
         )}
 
         {activeTab === "guide" && <GuideView project={project} />}
+        {activeTab === "reports" && <ReportsView project={project} />}
+        {activeTab === "video" && selectedVideo && <VideoWorkspace key={selectedVideo.id} project={project} video={selectedVideo} onBack={leaveVideo} onToggleWatched={toggleWatched} onSaveVideo={saveVideo} onOpenVideo={openVideo} />}
       </section>
+
+      {showNotifications && <NotificationCenter project={project} onClose={() => setShowNotifications(false)} onUpdate={replaceProject} onNavigate={navigateFromNotification} />}
 
       {showAdd && (
         <div className="modal-backdrop" role="presentation">

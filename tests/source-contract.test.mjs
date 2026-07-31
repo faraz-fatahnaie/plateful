@@ -50,17 +50,44 @@ test("separates public source from private user and Calendar data", async () => 
 });
 
 test("includes the complete roadmap and an interactive user guide", async () => {
-  const [app, roadmap, guide, lpic] = await Promise.all([
+  const [app, roadmap, guide, lpic, videos] = await Promise.all([
     source("app/StudyApp.tsx"),
     source("app/components/RoadmapView.tsx"),
     source("app/components/GuideView.tsx"),
     source("lib/lpic-roadmap.ts"),
+    source("lib/lpic-videos.ts"),
   ]);
 
   assert.match(app, /RoadmapView/);
   assert.match(app, /How to use/);
-  assert.match(roadmap, /type Frame = "day" \| "week" \| "month"/);
+  assert.match(roadmap, /type Frame = "journey" \| "day" \| "week" \| "month"/);
   assert.match(guide, /Missed a session/);
   assert.match(guide, /Watched extra videos/);
   assert.equal((lpic.match(/^  session\("/gm) ?? []).length, 55);
+  assert.equal((videos.match(/^    "index":/gm) ?? []).length, 81);
+});
+
+test("ships the video cockpit, AI adapters, reports, and notifications", async () => {
+  const [app, video, reports, notifications, aiRoute, transcriptRoute, emailRoute, design] = await Promise.all([
+    source("app/StudyApp.tsx"),
+    source("app/components/VideoWorkspace.tsx"),
+    source("app/components/ReportsView.tsx"),
+    source("app/components/NotificationCenter.tsx"),
+    source("app/api/ai/analyze/route.ts"),
+    source("app/api/videos/transcript/route.ts"),
+    source("app/api/notifications/email/route.ts"),
+    source("docs/PRODUCT_DESIGN.md"),
+  ]);
+
+  assert.match(app, /VideoWorkspace/);
+  assert.match(app, /ReportsView/);
+  assert.match(video, /youtube-nocookie\.com\/embed/);
+  assert.match(video, /AI study studio/);
+  assert.match(reports, /Weekly watch time/);
+  assert.match(notifications, /Email reminders/);
+  assert.match(aiRoute, /api\.openai\.com\/v1/);
+  assert.match(aiRoute, /localhost:11434/);
+  assert.match(transcriptRoute, /captionTracks/);
+  assert.match(emailRoute, /RESEND_API_KEY/);
+  assert.match(design, /Video workspace/);
 });

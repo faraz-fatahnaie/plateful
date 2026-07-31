@@ -1,6 +1,25 @@
 import { LPIC_SESSIONS } from "./lpic-roadmap";
+import { LPIC_VIDEO_DATA } from "./lpic-videos";
 
 export type PlaylistStatus = "active" | "paused" | "complete" | "planning";
+
+export type MindMapBranch = {
+  label: string;
+  children: string[];
+};
+
+export type AIStudyArtifacts = {
+  provider: string;
+  model: string;
+  generatedAt: string;
+  transcriptSource: "youtube-captions" | "pasted" | "external-service";
+  summary: string;
+  keyPoints: string[];
+  commands: string[];
+  mindMap: MindMapBranch[];
+  practice: string[];
+  quiz: Array<{ question: string; answer: string }>;
+};
 
 export type StudyVideo = {
   id: string;
@@ -10,8 +29,30 @@ export type StudyVideo = {
   durationSeconds: number;
   topic: string;
   watched: boolean;
+  watchedAt?: string | null;
   note: string;
   practiced: boolean;
+  transcript?: string;
+  aiArtifacts?: AIStudyArtifacts;
+};
+
+export type StudyNotification = {
+  id: string;
+  kind: "session" | "replan" | "note" | "ai" | "milestone";
+  title: string;
+  message: string;
+  createdAt: string;
+  read: boolean;
+  videoId?: string;
+  target?: "today" | "roadmap" | "reports";
+};
+
+export type NotificationPreferences = {
+  inApp: boolean;
+  email: boolean;
+  emailAddress: string;
+  leadMinutes: number;
+  dailyDigest: boolean;
 };
 
 export type StudySession = {
@@ -55,6 +96,8 @@ export type PlaylistStudyProject = {
     pendingChangeCount: number;
     lastSyncedAt: string | null;
   };
+  notificationPreferences?: NotificationPreferences;
+  notifications?: StudyNotification[];
   updatedAt: string;
 };
 
@@ -76,66 +119,17 @@ export const LPIC_SAMPLE: PlaylistStudyProject = {
     weekdayMinutes: 30,
     fridayMinutes: 60,
     excludedWeekdays: ["Thursday"],
-    priorities: ["Networking fundamentals", "Disks and filesystems"],
+    priorities: ["Networking fundamentals", "Linux installation and package management", "Devices, Linux filesystems, and FHS"],
     doNotSplitVideos: true,
   },
-  videos: [
-    {
-      id: "ep-068",
-      index: 68,
-      title: "Networking fundamentals: IP addresses",
-      url: "https://www.youtube.com/watch?v=8ptEav8iedA",
-      durationSeconds: 998,
-      topic: "Networking fundamentals",
-      watched: false,
-      note: "",
-      practiced: false,
-    },
-    {
-      id: "ep-069",
-      index: 69,
-      title: "Networking fundamentals: subnetting",
-      url: "https://www.youtube.com/playlist?list=PL-tKrPVkKKE0kM18Sg5fqaZW1V2nidAeU",
-      durationSeconds: 843,
-      topic: "Networking fundamentals",
-      watched: false,
-      note: "",
-      practiced: false,
-    },
-    {
-      id: "ep-070",
-      index: 70,
-      title: "Networking fundamentals: routes",
-      url: "https://www.youtube.com/playlist?list=PL-tKrPVkKKE0kM18Sg5fqaZW1V2nidAeU",
-      durationSeconds: 1028,
-      topic: "Networking fundamentals",
-      watched: false,
-      note: "",
-      practiced: false,
-    },
-    {
-      id: "ep-071",
-      index: 71,
-      title: "Network interfaces and configuration",
-      url: "https://www.youtube.com/playlist?list=PL-tKrPVkKKE0kM18Sg5fqaZW1V2nidAeU",
-      durationSeconds: 1210,
-      topic: "Networking fundamentals",
-      watched: false,
-      note: "",
-      practiced: false,
-    },
-    {
-      id: "ep-011",
-      index: 11,
-      title: "Design hard disk layout",
-      url: "https://www.youtube.com/playlist?list=PL-tKrPVkKKE0kM18Sg5fqaZW1V2nidAeU",
-      durationSeconds: 1120,
-      topic: "Disks and filesystems",
-      watched: false,
-      note: "",
-      practiced: false,
-    },
-  ],
+  videos: LPIC_VIDEO_DATA.map((video) => ({
+    ...video,
+    id: `ep-${String(video.index).padStart(3, "0")}`,
+    watched: false,
+    watchedAt: null,
+    note: "",
+    practiced: false,
+  })),
   sessions: LPIC_SESSIONS,
   calendar: {
     provider: "google",
@@ -144,6 +138,33 @@ export const LPIC_SAMPLE: PlaylistStudyProject = {
     pendingChangeCount: 0,
     lastSyncedAt: "2026-07-31T11:20:00Z",
   },
+  notificationPreferences: {
+    inApp: true,
+    email: false,
+    emailAddress: "faraz.fatahnaie@gmail.com",
+    leadMinutes: 30,
+    dailyDigest: true,
+  },
+  notifications: [
+    {
+      id: "welcome-roadmap",
+      kind: "session",
+      title: "Today’s LPIC session is ready",
+      message: "3 networking videos · 48 minutes · starts at 20:00",
+      createdAt: "2026-07-31T15:30:00Z",
+      read: false,
+      target: "today",
+    },
+    {
+      id: "network-first",
+      kind: "milestone",
+      title: "Priority route unlocked",
+      message: "Networking comes first, followed by disks and filesystems.",
+      createdAt: "2026-07-31T11:20:00Z",
+      read: false,
+      target: "roadmap",
+    },
+  ],
   updatedAt: "2026-07-31T11:20:00Z",
 };
 
