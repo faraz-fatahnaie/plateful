@@ -121,3 +121,28 @@ test("ships durable settings, external AI connections, and safe Calendar removal
   assert.doesNotMatch(migration, /CREATE TABLE `playlist_projects`/);
   assert.match(security, /Session keys live in browser memory only/);
 });
+
+test("ships layered discovery controls and Persian typography", async () => {
+  const [app, globalSearch, roadmap, discovery, layout, packageJson, design] = await Promise.all([
+    source("app/StudyApp.tsx"),
+    source("app/components/GlobalSearch.tsx"),
+    source("app/components/RoadmapView.tsx"),
+    source("lib/discovery.ts"),
+    source("app/layout.tsx"),
+    source("package.json"),
+    source("docs/SEARCH_DISCOVERY_DESIGN.md"),
+  ]);
+
+  assert.match(app, /playlistStatus/);
+  assert.match(app, /noteFilter/);
+  assert.match(app, /Ctrl K/);
+  assert.match(globalSearch, /Search playlists, videos, notes, topics, or dates/);
+  assert.match(globalSearch, /relevance/);
+  assert.match(roadmap, /duration-desc/);
+  assert.match(roadmap, /filteredSessions/);
+  assert.match(discovery, /PERSIAN_PATTERN/);
+  assert.match(discovery, /dir: "rtl"/);
+  assert.match(layout, /@fontsource-variable\/vazirmatn/);
+  assert.match(packageJson, /@fontsource-variable\/vazirmatn/);
+  assert.match(design, /Day\/Week\/Month/);
+});

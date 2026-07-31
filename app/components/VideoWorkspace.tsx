@@ -25,6 +25,7 @@ import {
 import type { AIStudyArtifacts, PlaylistStudyProject, StudyVideo } from "../../lib/playlist-study";
 import type { AIConnection, AIProvider } from "../../lib/app-settings";
 import { formatDuration } from "../../lib/playlist-study";
+import { languageProps } from "../../lib/discovery";
 
 type WorkspaceTab = "overview" | "ai" | "notes";
 
@@ -182,7 +183,7 @@ export default function VideoWorkspace({
     <section className="tab-panel video-workspace">
       <div className="video-breadcrumb">
         <button type="button" onClick={onBack}><ArrowLeft size={15} />Back</button>
-        <span>{project.title}</span><i>/</i><strong>Episode {String(video.index).padStart(3, "0")}</strong>
+        <span {...languageProps(project.title)}>{project.title}</span><i>/</i><strong>Episode {String(video.index).padStart(3, "0")}</strong>
       </div>
 
       <div className="video-stage">
@@ -200,8 +201,8 @@ export default function VideoWorkspace({
             )}
           </div>
           <div className="player-meta">
-            <div><span className="episode-badge">EP {String(video.index).padStart(3, "0")}</span><span className="topic-badge">{video.topic}</span></div>
-            <h2>{video.title}</h2>
+            <div><span className="episode-badge">EP {String(video.index).padStart(3, "0")}</span><span className="topic-badge" {...languageProps(video.topic)}>{video.topic}</span></div>
+            <h2 {...languageProps(video.title)}>{video.title}</h2>
             <div className="player-facts"><span><Clock3 size={14} />{formatDuration(video.durationSeconds)}</span><a href={video.url} target="_blank" rel="noreferrer"><Link2 size={14} />YouTube link</a><span><NotebookPen size={14} />{video.note.trim() ? "Note added" : "Note needed"}</span></div>
             <button className={`watch-state-button ${video.watched ? "watched" : ""}`} type="button" onClick={() => onToggleWatched(video.id)}>{video.watched ? <CheckCircle2 size={18} /> : <Check size={18} />}{video.watched ? "Completed" : "Mark as watched"}</button>
           </div>
@@ -230,7 +231,7 @@ export default function VideoWorkspace({
 
       {tab === "overview" && (
         <div className="overview-grid workspace-panel">
-          <article className="detail-card"><p className="eyebrow">Episode identity</p><h3>Everything about this video</h3><dl><div><dt>Playlist</dt><dd>{project.title}</dd></div><div><dt>Topic</dt><dd>{video.topic}</dd></div><div><dt>Episode</dt><dd>{video.index}</dd></div><div><dt>Duration</dt><dd>{formatDuration(video.durationSeconds)}</dd></div><div><dt>Practiced</dt><dd>{video.practiced ? "Yes" : "Not yet"}</dd></div><div><dt>Completed at</dt><dd>{video.watchedAt ? new Date(video.watchedAt).toLocaleString() : "Not completed"}</dd></div></dl></article>
+          <article className="detail-card"><p className="eyebrow">Episode identity</p><h3>Everything about this video</h3><dl><div><dt>Playlist</dt><dd {...languageProps(project.title)}>{project.title}</dd></div><div><dt>Topic</dt><dd {...languageProps(video.topic)}>{video.topic}</dd></div><div><dt>Episode</dt><dd>{video.index}</dd></div><div><dt>Duration</dt><dd>{formatDuration(video.durationSeconds)}</dd></div><div><dt>Practiced</dt><dd>{video.practiced ? "Yes" : "Not yet"}</dd></div><div><dt>Completed at</dt><dd>{video.watchedAt ? new Date(video.watchedAt).toLocaleString() : "Not completed"}</dd></div></dl></article>
           <article className="detail-card focus-card"><p className="eyebrow">Definition of done</p><h3>Learn it, don’t just play it</h3><ul><li className={video.watched ? "done" : ""}><span>{video.watched && <Check size={13} />}</span>Watch the complete episode</li><li className={video.note.trim() ? "done" : ""}><span>{video.note.trim() && <Check size={13} />}</span>Capture 3–5 useful ideas</li><li className={video.practiced ? "done" : ""}><span>{video.practiced && <Check size={13} />}</span>Reproduce one command or example</li><li className={video.aiArtifacts ? "done" : ""}><span>{video.aiArtifacts && <Check size={13} />}</span>Review the AI study pack (optional)</li></ul></article>
         </div>
       )}
@@ -248,17 +249,17 @@ export default function VideoWorkspace({
             <div className="ai-fields"><label>Model<input value={model} onChange={(event) => setModel(event.target.value)} placeholder="gemma3" /></label><label>Endpoint<input value={baseUrl} onChange={(event) => setBaseUrl(event.target.value)} /></label>{provider !== "ollama" && credentialMode === "session" && <label>API key <span>used once, never saved</span><div className="secret-input"><KeyRound size={14} /><input type="password" value={apiKey} onChange={(event) => setApiKey(event.target.value)} placeholder="••••••••••" autoComplete="off" /></div></label>}{provider !== "ollama" && credentialMode === "server" && <p className="server-key-ready">Using the server-managed secret configured in Settings.</p>}</div>
             {provider === "openai" && <p className="provider-caveat">A ChatGPT subscription is separate from API access. Connect with an OpenAI API key, or choose local Ollama for a no-cloud option.</p>}
             <div className="transcript-heading"><div><strong>Video transcript</strong><small>AI analyzes this text—not the video stream.</small></div><button onClick={loadTranscript} disabled={transcriptBusy}>{transcriptBusy ? <LoaderCircle className="spin" size={14} /> : <RefreshCw size={14} />}Try captions</button></div>
-            <textarea className="transcript-editor" value={transcript} onChange={(event) => { setTranscript(event.target.value); setTranscriptSource("pasted"); }} placeholder="Load public captions or paste the transcript here…" />
+            <textarea className="transcript-editor" value={transcript} onChange={(event) => { setTranscript(event.target.value); setTranscriptSource("pasted"); }} placeholder="Load public captions or paste the transcript here…" dir="auto" />
             <button className="primary-button full ai-generate-button" type="button" disabled={aiBusy} onClick={analyze}>{aiBusy ? <LoaderCircle className="spin" size={16} /> : <Sparkles size={16} />}{aiBusy ? "Building your study pack…" : video.aiArtifacts ? "Regenerate study pack" : "Generate summary, notes & mind map"}</button>
           </article>
 
           <article className="ai-results-card">
             {video.aiArtifacts ? <>
               <div className="ai-result-heading"><div><p className="eyebrow">AI study pack</p><h3>{video.aiArtifacts.model}</h3></div><span>{new Date(video.aiArtifacts.generatedAt).toLocaleDateString()}</span></div>
-              <section className="artifact-section"><h4>Summary</h4><p>{video.aiArtifacts.summary}</p></section>
-              <section className="artifact-section"><h4>Key ideas</h4><ul>{video.aiArtifacts.keyPoints.map((point) => <li key={point}>{point}</li>)}</ul></section>
-              <section className="artifact-section"><h4>Mind map</h4><div className="mind-map"><strong>{video.topic}</strong><div>{video.aiArtifacts.mindMap.map((branch) => <span key={branch.label}><b>{branch.label}</b>{branch.children.map((child) => <small key={child}>{child}</small>)}</span>)}</div></div></section>
-              <section className="artifact-section"><h4>Practice</h4><ol>{video.aiArtifacts.practice.map((item) => <li key={item}>{item}</li>)}</ol></section>
+              <section className="artifact-section"><h4>Summary</h4><p {...languageProps(video.aiArtifacts.summary)}>{video.aiArtifacts.summary}</p></section>
+              <section className="artifact-section"><h4>Key ideas</h4><ul>{video.aiArtifacts.keyPoints.map((point) => <li {...languageProps(point)} key={point}>{point}</li>)}</ul></section>
+              <section className="artifact-section"><h4>Mind map</h4><div className="mind-map"><strong {...languageProps(video.topic)}>{video.topic}</strong><div>{video.aiArtifacts.mindMap.map((branch) => <span key={branch.label}><b {...languageProps(branch.label)}>{branch.label}</b>{branch.children.map((child) => <small {...languageProps(child)} key={child}>{child}</small>)}</span>)}</div></div></section>
+              <section className="artifact-section"><h4>Practice</h4><ol>{video.aiArtifacts.practice.map((item) => <li {...languageProps(item)} key={item}>{item}</li>)}</ol></section>
               <button className="secondary-button button-with-icon" type="button" onClick={appendAI}><NotebookPen size={14} />Append to my note</button>
             </> : <div className="ai-empty"><span><WandSparkles size={28} /></span><h3>No study pack yet</h3><p>Load captions or paste a transcript, choose your AI, and generate a summary, notes, mind map, practice tasks, and quiz.</p></div>}
           </article>
@@ -268,7 +269,7 @@ export default function VideoWorkspace({
       {tab === "notes" && (
         <article className="personal-note-panel workspace-panel">
           <div><p className="eyebrow">Your own words</p><h3>Personal episode note</h3><p>Keep this separate from AI output until you explicitly append it.</p></div>
-          <textarea value={note} onChange={(event) => setNote(event.target.value)} placeholder={"## What I learned\n\n- Important idea\n\n## Practice\n\n- Command or example I reproduced\n\n## Remaining question\n\n- …"} />
+          <textarea value={note} onChange={(event) => setNote(event.target.value)} placeholder={"## What I learned\n\n- Important idea\n\n## Practice\n\n- Command or example I reproduced\n\n## Remaining question\n\n- …"} dir="auto" />
           <button className="primary-button button-with-icon" type="button" onClick={saveNote}><Save size={15} />Save personal note</button>
         </article>
       )}

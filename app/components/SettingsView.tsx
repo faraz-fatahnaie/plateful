@@ -109,7 +109,7 @@ export default function SettingsView({
         <article className="settings-card">
           <div className="settings-section-head"><span><User size={19} /></span><div><h3>Profile & study defaults</h3><p>Used when you add a new playlist.</p></div></div>
           <div className="settings-form-grid">
-            <label>Display name<input value={draft.displayName} onChange={(event) => setDraft({ ...draft, displayName: event.target.value })} /></label>
+            <label>Display name<input value={draft.displayName} onChange={(event) => setDraft({ ...draft, displayName: event.target.value })} dir="auto" /></label>
             <label>Timezone<input value={draft.timezone} onChange={(event) => setDraft({ ...draft, timezone: event.target.value })} /></label>
             <label>Default study time<input type="time" value={draft.defaultStudyTime} onChange={(event) => setDraft({ ...draft, defaultStudyTime: event.target.value })} /></label>
             <label>Week starts on<select value={draft.weekStartsOn} onChange={(event) => setDraft({ ...draft, weekStartsOn: event.target.value as AppSettings["weekStartsOn"] })}><option value="saturday">Saturday</option><option value="sunday">Sunday</option><option value="monday">Monday</option></select></label>

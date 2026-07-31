@@ -156,6 +156,19 @@ a precise Codex request. The app marks the removal as pending; it never claims
 deletion succeeded. Google Calendar must preview exact matches and receive
 explicit approval, while past and unrelated events remain untouched.
 
+## Discovery and multilingual content
+
+Global search is the fastest route across playlists, videos, personal notes,
+topics, and dated sessions. Scoped collection controls appear only where they
+improve a choice: Playlists, Notes, and Roadmap. Today remains a fixed execution
+queue, and calendar frames remain chronological even while filtered. Empty
+states describe the active constraint and offer one reset action.
+
+English interface typography remains Fraunces and Manrope. Persian user content
+is detected at the text boundary, marked RTL, and rendered with bundled
+Vazirmatn. Editors use automatic direction so mixed Persian/English notes and
+transcripts remain readable.
+
 ## Implementation sequence
 
 1. Extend the versioned project contract with completion timestamps, AI

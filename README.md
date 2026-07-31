@@ -24,6 +24,8 @@ data, notes, account, and Calendar credentials remain private.
 ## What the app includes
 
 - multi-playlist dashboard;
+- global search plus scoped playlist, note, and roadmap filtering/sorting;
+- automatic RTL direction and bundled Vazirmatn typography for Persian content;
 - guided playlist intake;
 - daily watch queue and links;
 - privacy-enhanced embedded YouTube player and full video information workspace;

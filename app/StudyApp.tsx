@@ -15,16 +15,19 @@ import {
   Play,
   Plus,
   Route,
+  Search,
   Settings2,
   ShieldCheck,
 } from "lucide-react";
 import GuideView from "./components/GuideView";
+import GlobalSearch from "./components/GlobalSearch";
 import NotificationCenter from "./components/NotificationCenter";
 import ReportsView from "./components/ReportsView";
 import RoadmapView from "./components/RoadmapView";
 import SettingsView from "./components/SettingsView";
 import VideoWorkspace from "./components/VideoWorkspace";
 import { cloneDefaultSettings, type AppSettings } from "../lib/app-settings";
+import { languageProps, matchesSearch, videoMatchesSearch } from "../lib/discovery";
 import {
   buildSkillRequest,
   completedCount,
@@ -82,6 +85,14 @@ export default function StudyApp() {
   const [selectedVideoId, setSelectedVideoId] = useState<string | null>(null);
   const [focusedSessionId, setFocusedSessionId] = useState<string | null>(null);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showGlobalSearch, setShowGlobalSearch] = useState(false);
+  const [playlistQuery, setPlaylistQuery] = useState("");
+  const [playlistStatus, setPlaylistStatus] = useState<"all" | PlaylistStudyProject["status"]>("all");
+  const [playlistSort, setPlaylistSort] = useState<"recent" | "progress" | "title">("recent");
+  const [noteQuery, setNoteQuery] = useState("");
+  const [noteFilter, setNoteFilter] = useState<"all" | "has-note" | "missing-note" | "watched">("all");
+  const [noteSort, setNoteSort] = useState<"episode" | "title" | "topic" | "recent">("episode");
+  const [roadmapSeedQuery, setRoadmapSeedQuery] = useState("");
   const [appSettings, setAppSettings] = useState<AppSettings>(cloneDefaultSettings());
   const [aiSessionKeys, setAiSessionKeys] = useState<Record<string, string>>({});
 
@@ -101,6 +112,28 @@ export default function StudyApp() {
     ? project.videos.find((video) => video.id === selectedVideoId) ?? null
     : null;
   const unreadNotifications = (project.notifications || []).filter((item) => !item.read).length;
+
+  const filteredProjects = useMemo(() => projects.filter((item) => (playlistStatus === "all" || item.status === playlistStatus) && matchesSearch(playlistQuery, item.title, item.goal, item.preferences)).sort((left, right) => {
+    if (playlistSort === "title") return left.title.localeCompare(right.title);
+    if (playlistSort === "progress") {
+      const leftProgress = left.totalVideoCount ? completedCount(left) / left.totalVideoCount : 0;
+      const rightProgress = right.totalVideoCount ? completedCount(right) / right.totalVideoCount : 0;
+      return rightProgress - leftProgress;
+    }
+    return right.updatedAt.localeCompare(left.updatedAt);
+  }), [playlistQuery, playlistSort, playlistStatus, projects]);
+
+  const filteredNotes = useMemo(() => project.videos.filter((video) => videoMatchesSearch(video, noteQuery) && (
+    noteFilter === "all" ||
+    (noteFilter === "has-note" && Boolean(video.note.trim())) ||
+    (noteFilter === "missing-note" && !video.note.trim()) ||
+    (noteFilter === "watched" && video.watched)
+  )).sort((left, right) => {
+    if (noteSort === "title") return left.title.localeCompare(right.title);
+    if (noteSort === "topic") return left.topic.localeCompare(right.topic) || left.index - right.index;
+    if (noteSort === "recent") return (right.watchedAt || "").localeCompare(left.watchedAt || "") || left.index - right.index;
+    return left.index - right.index;
+  }), [noteFilter, noteQuery, noteSort, project.videos]);
 
   const topics = useMemo(() => {
     const names = Array.from(new Set(project.videos.map((video) => video.topic)));
@@ -128,6 +161,19 @@ export default function StudyApp() {
     return () => {
       cancelled = true;
     };
+  }, []);
+
+  useEffect(() => {
+    const openSearch = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      const typing = target?.tagName === "INPUT" || target?.tagName === "TEXTAREA" || target?.tagName === "SELECT" || target?.isContentEditable;
+      if ((event.key === "/" && !typing) || ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k")) {
+        event.preventDefault();
+        setShowGlobalSearch(true);
+      }
+    };
+    window.addEventListener("keydown", openSearch);
+    return () => window.removeEventListener("keydown", openSearch);
   }, []);
 
   useEffect(() => {
@@ -274,6 +320,33 @@ export default function StudyApp() {
     requestAnimationFrame(() => document.getElementById("today-session")?.scrollIntoView({ behavior: "smooth", block: "start" }));
   }
 
+  function openGlobalProject(nextProject: PlaylistStudyProject) {
+    setSelectedId(nextProject.id);
+    setFocusedSessionId(null);
+    setActiveTab("today");
+  }
+
+  function openGlobalVideo(nextProject: PlaylistStudyProject, video: StudyVideo) {
+    setSelectedId(nextProject.id);
+    setPreviousTab(activeTab === "video" ? "today" : activeTab);
+    setSelectedVideoId(video.id);
+    setActiveTab("video");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function openGlobalSession(nextProject: PlaylistStudyProject, nextSession: StudySession) {
+    setSelectedId(nextProject.id);
+    setFocusedSessionId(nextSession.id);
+    setActiveTab("today");
+    requestAnimationFrame(() => document.getElementById("today-session")?.scrollIntoView({ behavior: "smooth", block: "start" }));
+  }
+
+  function openGlobalTopic(nextProject: PlaylistStudyProject, topic: string) {
+    setSelectedId(nextProject.id);
+    setRoadmapSeedQuery(topic);
+    setActiveTab("roadmap");
+  }
+
   function goToToday() {
     setFocusedSessionId(null);
     setActiveTab("today");
@@ -393,7 +466,7 @@ export default function StudyApp() {
         </div>
         <nav aria-label="Primary navigation">
           <button className={`nav-item ${activeTab === "today" ? "active" : ""}`} type="button" onClick={goToToday}><Home size={17} />Today</button>
-          <button className={`nav-item ${activeTab === "roadmap" ? "active" : ""}`} type="button" onClick={() => setActiveTab("roadmap")}><Route size={17} />Roadmap</button>
+          <button className={`nav-item ${activeTab === "roadmap" ? "active" : ""}`} type="button" onClick={() => { setRoadmapSeedQuery(""); setActiveTab("roadmap"); }}><Route size={17} />Roadmap</button>
           <button className={`nav-item ${activeTab === "playlists" ? "active" : ""}`} type="button" onClick={() => setActiveTab("playlists")}><Library size={17} />Playlists</button>
           <button className={`nav-item ${activeTab === "notes" ? "active" : ""}`} type="button" onClick={() => setActiveTab("notes")}><NotebookPen size={17} />Notes</button>
           <button className={`nav-item ${activeTab === "reports" ? "active" : ""}`} type="button" onClick={() => setActiveTab("reports")}><BarChart3 size={17} />Reports</button>
@@ -413,6 +486,7 @@ export default function StudyApp() {
             <h1>{tabCopy[activeTab].title}</h1>
           </div>
           <div className="top-actions">
+            <button className="global-search-trigger" type="button" onClick={() => setShowGlobalSearch(true)} aria-label="Search all learning content"><Search size={15} /><span>Search</span><kbd>Ctrl K</kbd></button>
             <span className={`save-state ${saveState}`}>{saveState === "saved" ? "Saved" : saveState === "saving" ? "Saving…" : "Preview data"}</span>
             <button className="icon-button notification-trigger" aria-label={`Notifications${unreadNotifications ? `, ${unreadNotifications} unread` : ""}`} type="button" onClick={() => setShowNotifications(true)}><Bell size={17} />{unreadNotifications > 0 && <span>{unreadNotifications}</span>}</button>
             <button className="primary-button button-with-icon" type="button" onClick={() => setShowAdd(true)}><Plus size={16} />Add playlist</button>
@@ -431,8 +505,8 @@ export default function StudyApp() {
                     {projects.map((item) => <option key={item.id} value={item.id}>{item.title}</option>)}
                   </select>
                 </div>
-                <h2>{project.title}</h2>
-                <p>{project.goal || "Ready for the planning skill to build this study project."}</p>
+                <h2 {...languageProps(project.title)}>{project.title}</h2>
+                <p {...languageProps(project.goal)}>{project.goal || "Ready for the planning skill to build this study project."}</p>
                 <div className="progress-row"><div className="progress-track"><span style={{ width: `${progress}%` }} /></div><strong>{progress}%</strong></div>
                 <div className="metrics">
                   <span><strong>{finished}</strong> completed</span>
@@ -455,7 +529,7 @@ export default function StudyApp() {
                     <div className={`video-row ${video.watched ? "done" : ""}`} key={video.id}>
                       <button className="check-button" aria-label={`Mark episode ${video.index} ${video.watched ? "not watched" : "watched"}`} type="button" onClick={() => toggleWatched(video.id)}>{video.watched ? "✓" : ""}</button>
                       <button className="episode-number" type="button" onClick={() => openVideo(video)}>{String(video.index).padStart(3, "0")}</button>
-                      <button className="video-copy video-open-copy" type="button" onClick={() => openVideo(video)}><strong>{video.title}</strong><span>{video.topic} · {formatDuration(video.durationSeconds)}</span></button>
+                      <button className="video-copy video-open-copy" type="button" onClick={() => openVideo(video)}><strong {...languageProps(video.title)}>{video.title}</strong><span {...languageProps(video.topic)}>{video.topic} · {formatDuration(video.durationSeconds)}</span></button>
                       {video.note && <span className="note-dot" title="Notes added">●</span>}
                       <button className="text-button" type="button" onClick={() => openNote(video)}>{video.note ? "Edit note" : "Add note"}</button>
                       <button className="play-button" type="button" onClick={() => openVideo(video)} aria-label={`Open episode ${video.index}`}><Play size={12} fill="currentColor" /></button>
@@ -482,7 +556,7 @@ export default function StudyApp() {
                 {(topics.length ? topics : project.policy.priorities.map((name) => ({ name, done: 0, total: 0 }))).map((topic, index) => (
                   <article className="topic-card" key={topic.name}>
                     <span className={`topic-icon color-${index % 3}`}>{index + 1}</span>
-                    <div><strong>{topic.name}</strong><span>{topic.total ? `${topic.done} of ${topic.total} visible videos complete` : "Waiting for inventory"}</span></div>
+                    <div><strong {...languageProps(topic.name)}>{topic.name}</strong><span>{topic.total ? `${topic.done} of ${topic.total} visible videos complete` : "Waiting for inventory"}</span></div>
                     <span>›</span>
                   </article>
                 ))}
@@ -517,19 +591,26 @@ export default function StudyApp() {
           </aside>
         </div>}
 
-        {activeTab === "roadmap" && <RoadmapView project={project} onOpenVideo={openVideo} onOpenSession={openSession} />}
+        {activeTab === "roadmap" && <RoadmapView key={`${project.id}-${roadmapSeedQuery}`} project={project} onOpenVideo={openVideo} onOpenSession={openSession} initialQuery={roadmapSeedQuery} />}
 
         {activeTab === "playlists" && (
           <section className="tab-panel library-view">
             <div className="panel-intro"><div><p className="eyebrow">Playlist library</p><h2>Keep every learning journey in one place</h2><p>Each project carries its own verified inventory, study policy, notes, roadmap, and Calendar state.</p></div><button className="primary-button button-with-icon" type="button" onClick={() => setShowAdd(true)}><Plus size={16} />New playlist</button></div>
+            <div className="collection-toolbar">
+              <label className="collection-search"><Search size={15} /><input value={playlistQuery} onChange={(event) => setPlaylistQuery(event.target.value)} placeholder="Search playlists, goals, or preferences…" aria-label="Search playlists" dir="auto" />{playlistQuery && <button type="button" onClick={() => setPlaylistQuery("")} aria-label="Clear playlist search">×</button>}</label>
+              <label><span>Status</span><select value={playlistStatus} onChange={(event) => setPlaylistStatus(event.target.value as typeof playlistStatus)}><option value="all">All statuses</option><option value="active">Active</option><option value="planning">Planning</option><option value="paused">Paused</option><option value="complete">Complete</option></select></label>
+              <label><span>Sort</span><select value={playlistSort} onChange={(event) => setPlaylistSort(event.target.value as typeof playlistSort)}><option value="recent">Recently updated</option><option value="progress">Highest progress</option><option value="title">Title A–Z</option></select></label>
+              <span className="result-count">{filteredProjects.length} of {projects.length}</span>
+            </div>
             <div className="project-grid">
-              {projects.map((item, index) => {
+              {filteredProjects.map((item, index) => {
                 const itemFinished = completedCount(item);
                 const itemProgress = item.totalVideoCount ? Math.round((itemFinished / item.totalVideoCount) * 100) : 0;
-                return <button className={`project-card color-project-${index % 3}`} key={item.id} type="button" onClick={() => { setSelectedId(item.id); setFocusedSessionId(null); setActiveTab("today"); }}><span className="project-card-icon"><Library size={20} /></span><span className="status-pill">{item.status}</span><h3>{item.title}</h3><p>{item.goal || "Waiting for the planning skill to complete this playlist."}</p><span className="project-card-progress"><i><b style={{ width: `${itemProgress}%` }} /></i><strong>{itemProgress}%</strong></span><span className="project-card-meta"><small>{item.totalVideoCount} videos</small><small>{item.sessions.length} study days</small><ExternalLink size={14} /></span></button>;
+                return <button className={`project-card color-project-${index % 3}`} key={item.id} type="button" onClick={() => openGlobalProject(item)}><span className="project-card-icon"><Library size={20} /></span><span className="status-pill">{item.status}</span><h3 {...languageProps(item.title)}>{item.title}</h3><p {...languageProps(item.goal)}>{item.goal || "Waiting for the planning skill to complete this playlist."}</p><span className="project-card-progress"><i><b style={{ width: `${itemProgress}%` }} /></i><strong>{itemProgress}%</strong></span><span className="project-card-meta"><small>{item.totalVideoCount} videos</small><small>{item.sessions.length} study days</small><ExternalLink size={14} /></span></button>;
               })}
-              <button className="project-card add-project-card" type="button" onClick={() => setShowAdd(true)}><span><Plus size={23} /></span><strong>Add another playlist</strong><small>Paste a link and set your study rules.</small></button>
+              {!playlistQuery && playlistStatus === "all" && <button className="project-card add-project-card" type="button" onClick={() => setShowAdd(true)}><span><Plus size={23} /></span><strong>Add another playlist</strong><small>Paste a link and set your study rules.</small></button>}
             </div>
+            {!filteredProjects.length && <div className="collection-empty"><Search size={22} /><strong>No playlists match</strong><p>Try another phrase or reset the status filter.</p><button className="secondary-button" type="button" onClick={() => { setPlaylistQuery(""); setPlaylistStatus("all"); }}>Reset filters</button></div>}
           </section>
         )}
 
@@ -537,10 +618,17 @@ export default function StudyApp() {
           <section className="tab-panel notes-view">
             <div className="panel-intro"><div><p className="eyebrow">Episode notes</p><h2>Your searchable learning trail</h2><p>Review what each episode taught you, then fill the gaps while the idea is still fresh.</p></div><button className="secondary-button button-with-icon" type="button" onClick={exportProject}><FileDown size={15} />Export project</button></div>
             <div className="notes-summary"><div><strong>{project.videos.filter((video) => video.note.trim()).length}</strong><span>notes written</span></div><div><strong>{project.videos.filter((video) => video.watched).length}</strong><span>videos watched</span></div><div><strong>{project.videos.filter((video) => video.watched && !video.note.trim()).length}</strong><span>notes to complete</span></div></div>
+            <div className="collection-toolbar notes-toolbar">
+              <label className="collection-search"><Search size={15} /><input value={noteQuery} onChange={(event) => setNoteQuery(event.target.value)} placeholder="Search titles, topics, or note text…" aria-label="Search episode notes" dir="auto" />{noteQuery && <button type="button" onClick={() => setNoteQuery("")} aria-label="Clear note search">×</button>}</label>
+              <label><span>Filter</span><select value={noteFilter} onChange={(event) => setNoteFilter(event.target.value as typeof noteFilter)}><option value="all">All episodes</option><option value="has-note">Has a note</option><option value="missing-note">Missing note</option><option value="watched">Watched</option></select></label>
+              <label><span>Sort</span><select value={noteSort} onChange={(event) => setNoteSort(event.target.value as typeof noteSort)}><option value="episode">Episode order</option><option value="recent">Recently watched</option><option value="title">Title A–Z</option><option value="topic">Topic</option></select></label>
+              <span className="result-count">{filteredNotes.length} of {project.videos.length}</span>
+            </div>
             <div className="notes-list">
-              {project.videos.map((video) => <button className="note-list-row" type="button" key={video.id} onClick={() => openVideo(video)}><span className={`note-status ${video.note.trim() ? "has-note" : ""}`}><NotebookPen size={16} /></span><span className="note-list-copy"><small>Episode {String(video.index).padStart(3, "0")} · {video.topic}</small><strong>{video.title}</strong><p>{video.note.trim() ? video.note.replace(/^#+\s*/gm, "").slice(0, 130) : "No note yet. Add 3–5 ideas, one command you tried, and one remaining question."}</p></span><span className="note-list-action">Open workspace<ExternalLink size={13} /></span></button>)}
+              {filteredNotes.map((video) => <button className="note-list-row" type="button" key={video.id} onClick={() => openVideo(video)}><span className={`note-status ${video.note.trim() ? "has-note" : ""}`}><NotebookPen size={16} /></span><span className="note-list-copy"><small {...languageProps(video.topic)}>Episode {String(video.index).padStart(3, "0")} · {video.topic}</small><strong {...languageProps(video.title)}>{video.title}</strong><p {...languageProps(video.note)}>{video.note.trim() ? video.note.replace(/^#+\s*/gm, "").slice(0, 130) : "No note yet. Add 3–5 ideas, one command you tried, and one remaining question."}</p></span><span className="note-list-action">Open workspace<ExternalLink size={13} /></span></button>)}
               {!project.videos.length && <article className="empty-card"><span className="empty-mark"><NotebookPen size={24} /></span><h2>Notes begin after planning</h2><p>Once the playlist inventory is verified, every episode gets a dedicated note entry here.</p></article>}
             </div>
+            {project.videos.length > 0 && !filteredNotes.length && <div className="collection-empty"><NotebookPen size={22} /><strong>No notes match</strong><p>Try another phrase or clear the note-state filter.</p><button className="secondary-button" type="button" onClick={() => { setNoteQuery(""); setNoteFilter("all"); }}>Reset filters</button></div>}
           </section>
         )}
 
@@ -551,6 +639,7 @@ export default function StudyApp() {
       </section>
 
       {showNotifications && <NotificationCenter project={project} onClose={() => setShowNotifications(false)} onUpdate={replaceProject} onNavigate={navigateFromNotification} />}
+      {showGlobalSearch && <GlobalSearch projects={projects} onClose={() => setShowGlobalSearch(false)} onOpenProject={openGlobalProject} onOpenVideo={openGlobalVideo} onOpenSession={openGlobalSession} onOpenTopic={openGlobalTopic} />}
 
       {showAdd && (
         <div className="modal-backdrop" role="presentation">
@@ -558,16 +647,16 @@ export default function StudyApp() {
             <div className="modal-heading"><div><p className="eyebrow">New study project</p><h2>Add a YouTube playlist</h2><p>The skill will verify videos and build the detailed plan after this intake.</p></div><button type="button" className="icon-button" onClick={() => setShowAdd(false)} aria-label="Close">×</button></div>
             <div className="form-grid">
               <label className="span-two">Playlist URL<input name="url" type="url" required placeholder="https://www.youtube.com/playlist?list=…" /></label>
-              <label>Project name<input name="title" required placeholder="Linux networking course" /></label>
+              <label>Project name<input name="title" required placeholder="Linux networking course" dir="auto" /></label>
               <label>Start date<input name="startDate" type="date" defaultValue="2026-08-01" /></label>
-              <label className="span-two">Learning goal<textarea name="goal" rows={2} placeholder="What should you be able to do when finished?" /></label>
+              <label className="span-two">Learning goal<textarea name="goal" rows={2} placeholder="What should you be able to do when finished?" dir="auto" /></label>
               <label>Minutes on normal days<input name="weekdayMinutes" type="number" min="5" defaultValue="30" /></label>
               <label>Minutes on Friday<input name="fridayMinutes" type="number" min="5" defaultValue="60" /></label>
               <label>Study time<input name="startTime" type="time" defaultValue={appSettings.defaultStudyTime} /></label>
               <label>Timezone<input name="timezone" defaultValue={appSettings.timezone} /></label>
               <label>Excluded weekdays<input name="excluded" defaultValue="Thursday" /></label>
-              <label>Priority topics<input name="priorities" placeholder="Network, disks" /></label>
-              <label className="span-two">Other preferences<textarea name="preferences" rows={2} placeholder="Do not split videos; use Fridays for labs…" /></label>
+              <label>Priority topics<input name="priorities" placeholder="Network, disks" dir="auto" /></label>
+              <label className="span-two">Other preferences<textarea name="preferences" rows={2} placeholder="Do not split videos; use Fridays for labs…" dir="auto" /></label>
             </div>
             <div className="modal-actions"><button className="secondary-button" type="button" onClick={() => setShowAdd(false)}>Cancel</button><button className="primary-button" type="submit">Save playlist intake</button></div>
           </form>
@@ -579,7 +668,7 @@ export default function StudyApp() {
           <section className="modal note-modal" role="dialog" aria-modal="true" aria-label={`Notes for episode ${noteVideo.index}`}>
             <div className="modal-heading"><div><p className="eyebrow">Episode {String(noteVideo.index).padStart(3, "0")}</p><h2>{noteVideo.title}</h2></div><button type="button" className="icon-button" onClick={() => setNoteVideo(null)} aria-label="Close">×</button></div>
             <p className="note-prompt">Capture 3–5 ideas, commands you ran, one mistake, and one remaining question.</p>
-            <textarea className="note-editor" value={noteDraft} onChange={(event) => setNoteDraft(event.target.value)} placeholder={"## What I learned\n\n- Important idea\n\n## Practice\n\n- Command or example I reproduced\n\n## Remaining question\n\n- …"} />
+            <textarea className="note-editor" value={noteDraft} onChange={(event) => setNoteDraft(event.target.value)} placeholder={"## What I learned\n\n- Important idea\n\n## Practice\n\n- Command or example I reproduced\n\n## Remaining question\n\n- …"} dir="auto" />
             <div className="modal-actions"><a className="text-button" href={noteVideo.url} target="_blank" rel="noreferrer">Open video ↗</a><button className="primary-button" type="button" onClick={saveNote}>Save note</button></div>
           </section>
         </div>
