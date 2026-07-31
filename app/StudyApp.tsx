@@ -31,6 +31,7 @@ import {
   formatDuration,
   LPIC_SAMPLE,
   PlaylistStudyProject,
+  StudySession,
   StudyVideo,
   todaySession,
 } from "../lib/playlist-study";
@@ -79,13 +80,16 @@ export default function StudyApp() {
   const [activeTab, setActiveTab] = useState<AppTab>("today");
   const [previousTab, setPreviousTab] = useState<AppTab>("today");
   const [selectedVideoId, setSelectedVideoId] = useState<string | null>(null);
+  const [focusedSessionId, setFocusedSessionId] = useState<string | null>(null);
   const [showNotifications, setShowNotifications] = useState(false);
   const [appSettings, setAppSettings] = useState<AppSettings>(cloneDefaultSettings());
   const [aiSessionKeys, setAiSessionKeys] = useState<Record<string, string>>({});
 
   const project =
     projects.find((candidate) => candidate.id === selectedId) ?? projects[0];
-  const session = todaySession(project);
+  const defaultSession = todaySession(project);
+  const session = project.sessions.find((item) => item.id === focusedSessionId) ?? defaultSession;
+  const isFocusedSession = Boolean(focusedSessionId && session.id !== defaultSession.id);
   const sessionVideos = session.videoIds
     .map((id) => project.videos.find((video) => video.id === id))
     .filter((video): video is StudyVideo => Boolean(video));
@@ -264,6 +268,17 @@ export default function StudyApp() {
     setSelectedVideoId(null);
   }
 
+  function openSession(nextSession: StudySession) {
+    setFocusedSessionId(nextSession.id);
+    setActiveTab("today");
+    requestAnimationFrame(() => document.getElementById("today-session")?.scrollIntoView({ behavior: "smooth", block: "start" }));
+  }
+
+  function goToToday() {
+    setFocusedSessionId(null);
+    setActiveTab("today");
+  }
+
   function navigateFromNotification(target?: string, videoId?: string) {
     setShowNotifications(false);
     if (videoId) {
@@ -271,7 +286,8 @@ export default function StudyApp() {
       if (video) openVideo(video);
       return;
     }
-    if (target && ["today", "roadmap", "reports"].includes(target)) setActiveTab(target as AppTab);
+    if (target === "today") goToToday();
+    else if (target && ["roadmap", "reports"].includes(target)) setActiveTab(target as AppTab);
   }
 
   function openNote(video: StudyVideo) {
@@ -376,7 +392,7 @@ export default function StudyApp() {
           <span>Plateful</span>
         </div>
         <nav aria-label="Primary navigation">
-          <button className={`nav-item ${activeTab === "today" ? "active" : ""}`} type="button" onClick={() => setActiveTab("today")}><Home size={17} />Today</button>
+          <button className={`nav-item ${activeTab === "today" ? "active" : ""}`} type="button" onClick={goToToday}><Home size={17} />Today</button>
           <button className={`nav-item ${activeTab === "roadmap" ? "active" : ""}`} type="button" onClick={() => setActiveTab("roadmap")}><Route size={17} />Roadmap</button>
           <button className={`nav-item ${activeTab === "playlists" ? "active" : ""}`} type="button" onClick={() => setActiveTab("playlists")}><Library size={17} />Playlists</button>
           <button className={`nav-item ${activeTab === "notes" ? "active" : ""}`} type="button" onClick={() => setActiveTab("notes")}><NotebookPen size={17} />Notes</button>
@@ -428,11 +444,12 @@ export default function StudyApp() {
             </article>
 
             {project.videos.length ? (
-              <article className="session-card">
+              <article className="session-card" id="today-session">
                 <div className="section-heading">
-                  <div><p className="eyebrow">Today’s session</p><h2>{sessionVideos.length} videos · {session.plannedMinutes} minutes</h2></div>
+                  <div><p className="eyebrow">{isFocusedSession ? `Selected session · ${readableDate(session.date)}` : "Today’s session"}</p><h2>{sessionVideos.length} videos · {session.plannedMinutes} minutes</h2></div>
                   <span className="time-chip"><Clock3 size={13} />{project.policy.startTime}</span>
                 </div>
+                {isFocusedSession && <button className="return-today" type="button" onClick={() => setFocusedSessionId(null)}>← Return to today’s session</button>}
                 <div className="video-list">
                   {sessionVideos.map((video) => (
                     <div className={`video-row ${video.watched ? "done" : ""}`} key={video.id}>
@@ -500,7 +517,7 @@ export default function StudyApp() {
           </aside>
         </div>}
 
-        {activeTab === "roadmap" && <RoadmapView project={project} onOpenVideo={openVideo} />}
+        {activeTab === "roadmap" && <RoadmapView project={project} onOpenVideo={openVideo} onOpenSession={openSession} />}
 
         {activeTab === "playlists" && (
           <section className="tab-panel library-view">
@@ -509,7 +526,7 @@ export default function StudyApp() {
               {projects.map((item, index) => {
                 const itemFinished = completedCount(item);
                 const itemProgress = item.totalVideoCount ? Math.round((itemFinished / item.totalVideoCount) * 100) : 0;
-                return <button className={`project-card color-project-${index % 3}`} key={item.id} type="button" onClick={() => { setSelectedId(item.id); setActiveTab("today"); }}><span className="project-card-icon"><Library size={20} /></span><span className="status-pill">{item.status}</span><h3>{item.title}</h3><p>{item.goal || "Waiting for the planning skill to complete this playlist."}</p><span className="project-card-progress"><i><b style={{ width: `${itemProgress}%` }} /></i><strong>{itemProgress}%</strong></span><span className="project-card-meta"><small>{item.totalVideoCount} videos</small><small>{item.sessions.length} study days</small><ExternalLink size={14} /></span></button>;
+                return <button className={`project-card color-project-${index % 3}`} key={item.id} type="button" onClick={() => { setSelectedId(item.id); setFocusedSessionId(null); setActiveTab("today"); }}><span className="project-card-icon"><Library size={20} /></span><span className="status-pill">{item.status}</span><h3>{item.title}</h3><p>{item.goal || "Waiting for the planning skill to complete this playlist."}</p><span className="project-card-progress"><i><b style={{ width: `${itemProgress}%` }} /></i><strong>{itemProgress}%</strong></span><span className="project-card-meta"><small>{item.totalVideoCount} videos</small><small>{item.sessions.length} study days</small><ExternalLink size={14} /></span></button>;
               })}
               <button className="project-card add-project-card" type="button" onClick={() => setShowAdd(true)}><span><Plus size={23} /></span><strong>Add another playlist</strong><small>Paste a link and set your study rules.</small></button>
             </div>

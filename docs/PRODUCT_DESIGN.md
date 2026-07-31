@@ -92,8 +92,10 @@ episode is a node with one of four states:
 - needs a note.
 
 Nodes show episode number, duration, and state. Selecting a node opens its video
-workspace. Day/week/month frames remain available for planning. Episode chips
-in every frame are also clickable.
+workspace. Day rows and planned Week/Month dates are session-level navigation
+controls. Selecting one opens that exact date in the Today workspace, where the
+learner can complete its videos and return to the current session without
+losing place.
 
 Gamification is intentionally lightweight: progress rings, level labels,
 streaks, and milestone celebrations reinforce consistency without punishing a

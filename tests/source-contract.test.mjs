@@ -61,6 +61,10 @@ test("includes the complete roadmap and an interactive user guide", async () => 
   assert.match(app, /RoadmapView/);
   assert.match(app, /How to use/);
   assert.match(roadmap, /type Frame = "journey" \| "day" \| "week" \| "month"/);
+  assert.match(roadmap, /onOpenSession/);
+  assert.match(roadmap, /Open \$\{longDate\(item\.date\)\} study session/);
+  assert.match(app, /focusedSessionId/);
+  assert.match(app, /Return to today’s session/);
   assert.match(guide, /Missed a session/);
   assert.match(guide, /Watched extra videos/);
   assert.equal((lpic.match(/^  session\("/gm) ?? []).length, 55);

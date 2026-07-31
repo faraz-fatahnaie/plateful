@@ -55,7 +55,7 @@ function durationLabel(seconds: number) {
   return hours ? `${hours}h ${minutes}m` : `${minutes}m`;
 }
 
-export default function RoadmapView({ project, onOpenVideo }: { project: PlaylistStudyProject; onOpenVideo: (video: StudyVideo) => void }) {
+export default function RoadmapView({ project, onOpenVideo, onOpenSession }: { project: PlaylistStudyProject; onOpenVideo: (video: StudyVideo) => void; onOpenSession: (session: StudySession) => void }) {
   const [frame, setFrame] = useState<Frame>("journey");
   const sessions = project.sessions;
   const totalWatchSeconds = sessions.reduce((sum, session) => sum + watchSeconds(session), 0);
@@ -91,10 +91,6 @@ export default function RoadmapView({ project, onOpenVideo }: { project: Playlis
         videos: project.videos.filter((video) => video.topic === topic),
       }));
   }, [project.policy.priorities, project.videos]);
-
-  function videoFor(id: string) {
-    return project.videos.find((video) => video.id === id);
-  }
 
   return (
     <section className="tab-panel roadmap-view">
@@ -154,11 +150,11 @@ export default function RoadmapView({ project, onOpenVideo }: { project: Playlis
       {frame === "day" && (
         <div className="day-roadmap frame-panel">
           {sessions.map((session, index) => (
-            <article className="roadmap-day-card" key={session.id}>
+            <article className="roadmap-day-card interactive-session" key={session.id} role="button" tabIndex={0} onClick={() => onOpenSession(session)} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); onOpenSession(session); } }} aria-label={`Open ${longDate(session.date)} study session`}>
               <div className="roadmap-day-index"><span>{String(index + 1).padStart(2, "0")}</span><i /></div>
               <div className="roadmap-date"><strong>{longDate(session.date)}</strong><span>{session.date}</span></div>
               <div className="roadmap-module"><strong>{session.module ?? "Playlist study"}</strong><span>{session.videoIds.length} video{session.videoIds.length === 1 ? "" : "s"}</span></div>
-              <div className="episode-chips">{session.videoIds.map((id) => { const video = videoFor(id); return video ? <button type="button" key={id} onClick={() => onOpenVideo(video)} aria-label={`Open episode ${video.index}`}>{episodeNumber(id)}</button> : <span key={id}>{episodeNumber(id)}</span>; })}</div>
+              <div className="episode-chips">{session.videoIds.map((id) => <span key={id}>{episodeNumber(id)}</span>)}</div>
               <div className="roadmap-duration"><Clock3 size={14} /><strong>{durationLabel(watchSeconds(session))}</strong></div>
             </article>
           ))}
@@ -185,13 +181,15 @@ export default function RoadmapView({ project, onOpenVideo }: { project: Playlis
                     const key = date.toISOString().slice(0, 10);
                     const item = week.items.find((session) => session.date === key);
                     const isThursday = date.getDay() === 4;
-                    return (
-                      <div className={`week-day ${item ? "planned" : ""} ${isThursday ? "off" : ""}`} key={key}>
+                    return item ? <button type="button" className="week-day planned interactive-session" key={key} onClick={() => onOpenSession(item)} aria-label={`Open ${longDate(item.date)} study session`}>
                         <span>{new Intl.DateTimeFormat("en", { weekday: "short" }).format(date)}</span>
                         <strong>{date.getDate()}</strong>
-                        {item ? <small>{item.videoIds.length} video{item.videoIds.length === 1 ? "" : "s"}<br />{item.plannedMinutes}m</small> : <small>{isThursday ? "Rest" : "Open"}</small>}
-                      </div>
-                    );
+                        <small>{item.videoIds.length} video{item.videoIds.length === 1 ? "" : "s"}<br />{item.plannedMinutes}m</small>
+                      </button> : <div className={`week-day ${isThursday ? "off" : ""}`} key={key} aria-label={`${longDate(key)}: ${isThursday ? "rest day" : "no session"}`}>
+                        <span>{new Intl.DateTimeFormat("en", { weekday: "short" }).format(date)}</span>
+                        <strong>{date.getDate()}</strong>
+                        <small>{isThursday ? "Rest" : "Open"}</small>
+                      </div>;
                   })}
                 </div>
                 <div className="week-focus"><Sparkles size={14} /><span>{week.items.map((item) => item.module).filter((value, index, array) => value && array.indexOf(value) === index).join(" · ")}</span></div>
@@ -219,13 +217,15 @@ export default function RoadmapView({ project, onOpenVideo }: { project: Playlis
                     const date = `${month.key}-${String(day).padStart(2, "0")}`;
                     const item = month.items.find((session) => session.date === date);
                     const thursday = dateAtNoon(date).getDay() === 4;
-                    return (
-                      <span className={`month-cell ${item ? "planned" : ""} ${thursday ? "off" : ""}`} key={date}>
+                    return item ? (
+                      <button type="button" className="month-cell planned interactive-session" key={date} onClick={() => onOpenSession(item)} aria-label={`Open ${longDate(item.date)} study session`}>
                         <b>{day}</b>
-                        {item && <small>{item.videoIds.map(episodeNumber).join(" · ")}</small>}
-                        {thursday && !item && <i>rest</i>}
-                      </span>
-                    );
+                        <small>{item.videoIds.map(episodeNumber).join(" · ")}</small>
+                      </button>
+                    ) : <span className={`month-cell ${thursday ? "off" : ""}`} key={date}>
+                      <b>{day}</b>
+                      {thursday && <i>rest</i>}
+                    </span>;
                   })}
                 </div>
               </article>
