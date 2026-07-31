@@ -15,13 +15,16 @@ import {
   Play,
   Plus,
   Route,
+  Settings2,
   ShieldCheck,
 } from "lucide-react";
 import GuideView from "./components/GuideView";
 import NotificationCenter from "./components/NotificationCenter";
 import ReportsView from "./components/ReportsView";
 import RoadmapView from "./components/RoadmapView";
+import SettingsView from "./components/SettingsView";
 import VideoWorkspace from "./components/VideoWorkspace";
+import { cloneDefaultSettings, type AppSettings } from "../lib/app-settings";
 import {
   buildSkillRequest,
   completedCount,
@@ -33,7 +36,7 @@ import {
 } from "../lib/playlist-study";
 
 type SaveState = "saved" | "saving" | "preview";
-type AppTab = "today" | "roadmap" | "playlists" | "notes" | "reports" | "guide" | "video";
+type AppTab = "today" | "roadmap" | "playlists" | "notes" | "reports" | "guide" | "settings" | "video";
 
 const tabCopy: Record<AppTab, { eyebrow: string; title: string }> = {
   today: { eyebrow: "Your next focused session", title: "Good afternoon, Faraz." },
@@ -42,6 +45,7 @@ const tabCopy: Record<AppTab, { eyebrow: string; title: string }> = {
   notes: { eyebrow: "Your knowledge archive", title: "Turn watching into recall." },
   reports: { eyebrow: "Progress you can act on", title: "See how your learning compounds." },
   guide: { eyebrow: "A five-step workflow", title: "Learn how to use Plateful." },
+  settings: { eyebrow: "Preferences · AI · Calendar", title: "Your workspace, your rules." },
   video: { eyebrow: "Video learning cockpit", title: "Watch, understand, and remember." },
 };
 
@@ -57,6 +61,12 @@ function readableDate(date: string) {
   }).format(new Date(`${date}T12:00:00`));
 }
 
+function todayInTimezone(timezone: string) {
+  const parts = new Intl.DateTimeFormat("en", { timeZone: timezone, year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date());
+  const value = (type: Intl.DateTimeFormatPartTypes) => parts.find((part) => part.type === type)?.value || "";
+  return `${value("year")}-${value("month")}-${value("day")}`;
+}
+
 export default function StudyApp() {
   const [projects, setProjects] = useState<PlaylistStudyProject[]>([cloneSample()]);
   const [selectedId, setSelectedId] = useState(LPIC_SAMPLE.id);
@@ -70,6 +80,8 @@ export default function StudyApp() {
   const [previousTab, setPreviousTab] = useState<AppTab>("today");
   const [selectedVideoId, setSelectedVideoId] = useState<string | null>(null);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [appSettings, setAppSettings] = useState<AppSettings>(cloneDefaultSettings());
+  const [aiSessionKeys, setAiSessionKeys] = useState<Record<string, string>>({});
 
   const project =
     projects.find((candidate) => candidate.id === selectedId) ?? projects[0];
@@ -114,6 +126,20 @@ export default function StudyApp() {
     };
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/settings")
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Settings persistence unavailable");
+        return (await response.json()) as { settings?: AppSettings | null };
+      })
+      .then((payload) => {
+        if (!cancelled && payload.settings) setAppSettings(payload.settings);
+      })
+      .catch(() => undefined);
+    return () => { cancelled = true; };
+  }, []);
+
   async function persist(next: PlaylistStudyProject) {
     setSaveState("saving");
     try {
@@ -136,6 +162,49 @@ export default function StudyApp() {
         : [next, ...current],
     );
     if (shouldPersist) void persist(next);
+  }
+
+  async function saveAppSettings(next: AppSettings) {
+    setAppSettings(next);
+    setSaveState("saving");
+    try {
+      const response = await fetch("/api/settings", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(next) });
+      if (!response.ok) throw new Error("Settings save failed");
+      const payload = (await response.json()) as { settings?: AppSettings };
+      if (payload.settings) setAppSettings(payload.settings);
+      setSaveState("saved");
+      setNotice("Settings saved. Secret keys were not persisted.");
+    } catch {
+      setSaveState("preview");
+      setNotice("Settings are active in this preview, but server persistence is unavailable.");
+    }
+  }
+
+  async function prepareCalendarRemoval(target: PlaylistStudyProject) {
+    const today = todayInTimezone(target.policy.timezone);
+    const futureSessions = target.sessions.filter((item) => item.date >= today && item.status !== "complete");
+    const requestedAt = new Date().toISOString();
+    const requestText = [
+      "Use the google-calendar and plan-youtube-playlist-study skills.",
+      `Preview removal of future Google Calendar study events for playlist \"${target.title}\" only.`,
+      `Project ID: ${target.id}`,
+      `Playlist URL: ${target.playlistUrl}`,
+      `Calendar: ${target.calendar.calendarId}`,
+      `Timezone: ${target.policy.timezone}`,
+      `Date boundary: ${today} and later`,
+      `Expected future study sessions: ${futureSessions.length}`,
+      "Match events by project ID metadata when available; otherwise use the exact playlist title and Plateful study-event title prefix.",
+      "Preserve past events, completed events, and all unrelated events.",
+      "Show the exact matching event list before deleting anything. Apply deletion only after explicit approval.",
+    ].join("\n");
+    await navigator.clipboard.writeText(requestText);
+    replaceProject({
+      ...target,
+      updatedAt: requestedAt,
+      calendar: { ...target.calendar, syncState: "changes-pending", pendingChangeCount: futureSessions.length, pendingAction: "remove", removalRequestedAt: requestedAt },
+      notifications: [{ id: `calendar-remove-${requestedAt}`, kind: "replan", title: "Calendar removal preview ready", message: `Review ${futureSessions.length} future ${target.title} session${futureSessions.length === 1 ? "" : "s"} in Codex before approving deletion.`, createdAt: requestedAt, read: false, target: "roadmap" }, ...(target.notifications || [])],
+    });
+    setNotice("Exact Calendar removal request copied. Paste it into Codex to preview matching events and approve deletion.");
   }
 
   function toggleWatched(videoId: string) {
@@ -259,9 +328,9 @@ export default function StudyApp() {
       totalVideoCount: 0,
       totalDurationSeconds: 0,
       policy: {
-        timezone: String(data.get("timezone") || "Asia/Tehran"),
+        timezone: String(data.get("timezone") || appSettings.timezone),
         startDate: String(data.get("startDate") || "2026-08-01"),
-        startTime: String(data.get("startTime") || "20:00"),
+        startTime: String(data.get("startTime") || appSettings.defaultStudyTime),
         weekdayMinutes: Number(data.get("weekdayMinutes") || 30),
         fridayMinutes: Number(data.get("fridayMinutes") || 60),
         excludedWeekdays: String(data.get("excluded") || "Thursday")
@@ -313,10 +382,11 @@ export default function StudyApp() {
           <button className={`nav-item ${activeTab === "notes" ? "active" : ""}`} type="button" onClick={() => setActiveTab("notes")}><NotebookPen size={17} />Notes</button>
           <button className={`nav-item ${activeTab === "reports" ? "active" : ""}`} type="button" onClick={() => setActiveTab("reports")}><BarChart3 size={17} />Reports</button>
           <button className={`nav-item ${activeTab === "guide" ? "active" : ""}`} type="button" onClick={() => setActiveTab("guide")}><CircleHelp size={17} />How to use</button>
+          <button className={`nav-item ${activeTab === "settings" ? "active" : ""}`} type="button" onClick={() => setActiveTab("settings")}><Settings2 size={17} />Settings</button>
         </nav>
         <div className="sidebar-bottom">
           <div className="privacy-note"><ShieldCheck size={15} /><div><strong>Private workspace</strong><small>Your study data stays in your account.</small></div></div>
-          <button className="profile" type="button"><span className="avatar">F</span><span><strong>Faraz</strong><small>Asia/Tehran</small></span><ChevronDown size={15} /></button>
+          <button className="profile" type="button" onClick={() => setActiveTab("settings")}><span className="avatar">{(appSettings.displayName || "U").slice(0, 1).toUpperCase()}</span><span><strong>{appSettings.displayName || "User"}</strong><small>{appSettings.timezone}</small></span><ChevronDown size={15} /></button>
         </div>
       </aside>
 
@@ -459,7 +529,8 @@ export default function StudyApp() {
 
         {activeTab === "guide" && <GuideView project={project} />}
         {activeTab === "reports" && <ReportsView project={project} />}
-        {activeTab === "video" && selectedVideo && <VideoWorkspace key={selectedVideo.id} project={project} video={selectedVideo} onBack={leaveVideo} onToggleWatched={toggleWatched} onSaveVideo={saveVideo} onOpenVideo={openVideo} />}
+        {activeTab === "settings" && <SettingsView settings={appSettings} projects={projects} activeProject={project} sessionKeys={aiSessionKeys} onSessionKey={(id, value) => setAiSessionKeys((current) => ({ ...current, [id]: value }))} onSave={saveAppSettings} onPrepareCalendarRemoval={prepareCalendarRemoval} />}
+        {activeTab === "video" && selectedVideo && <VideoWorkspace key={selectedVideo.id} project={project} video={selectedVideo} aiConnection={appSettings.aiConnections.find((item) => item.id === appSettings.activeAIConnectionId)} aiApiKey={appSettings.activeAIConnectionId ? aiSessionKeys[appSettings.activeAIConnectionId] || "" : ""} persistTranscript={appSettings.privacy.allowTranscriptStorage} onBack={leaveVideo} onToggleWatched={toggleWatched} onSaveVideo={saveVideo} onOpenVideo={openVideo} />}
       </section>
 
       {showNotifications && <NotificationCenter project={project} onClose={() => setShowNotifications(false)} onUpdate={replaceProject} onNavigate={navigateFromNotification} />}
@@ -475,8 +546,8 @@ export default function StudyApp() {
               <label className="span-two">Learning goal<textarea name="goal" rows={2} placeholder="What should you be able to do when finished?" /></label>
               <label>Minutes on normal days<input name="weekdayMinutes" type="number" min="5" defaultValue="30" /></label>
               <label>Minutes on Friday<input name="fridayMinutes" type="number" min="5" defaultValue="60" /></label>
-              <label>Study time<input name="startTime" type="time" defaultValue="20:00" /></label>
-              <label>Timezone<input name="timezone" defaultValue="Asia/Tehran" /></label>
+              <label>Study time<input name="startTime" type="time" defaultValue={appSettings.defaultStudyTime} /></label>
+              <label>Timezone<input name="timezone" defaultValue={appSettings.timezone} /></label>
               <label>Excluded weekdays<input name="excluded" defaultValue="Thursday" /></label>
               <label>Priority topics<input name="priorities" placeholder="Network, disks" /></label>
               <label className="span-two">Other preferences<textarea name="preferences" rows={2} placeholder="Do not split videos; use Fridays for labs…" /></label>

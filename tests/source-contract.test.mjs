@@ -91,3 +91,29 @@ test("ships the video cockpit, AI adapters, reports, and notifications", async (
   assert.match(emailRoute, /RESEND_API_KEY/);
   assert.match(design, /Video workspace/);
 });
+
+test("ships durable settings, external AI connections, and safe Calendar removal", async () => {
+  const [app, settingsView, settingsRoute, aiTest, aiAnalyze, schema, migration, security] = await Promise.all([
+    source("app/StudyApp.tsx"),
+    source("app/components/SettingsView.tsx"),
+    source("app/api/settings/route.ts"),
+    source("app/api/ai/test/route.ts"),
+    source("app/api/ai/analyze/route.ts"),
+    source("db/schema.ts"),
+    source("drizzle/0001_wealthy_beyonder.sql"),
+    source("SECURITY.md"),
+  ]);
+
+  assert.match(app, /SettingsView/);
+  assert.match(app, /Preserve past events, completed events, and all unrelated events/);
+  assert.match(settingsView, /Remove playlist from Calendar/);
+  assert.match(settingsView, /API keys are never written to app settings/);
+  assert.match(settingsRoute, /oai-authenticated-user-email/);
+  assert.match(settingsRoute, /withoutSecrets/);
+  assert.match(aiTest, /TestRequest/);
+  assert.match(aiAnalyze, /OPENAI_API_KEY/);
+  assert.match(schema, /userSettings/);
+  assert.match(migration, /CREATE TABLE `user_settings`/);
+  assert.doesNotMatch(migration, /CREATE TABLE `playlist_projects`/);
+  assert.match(security, /Session keys live in browser memory only/);
+});

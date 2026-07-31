@@ -140,6 +140,20 @@ motions create personality while preserving contrast and fast scanning.
 - AI output is labeled by provider/model and remains editable or discardable.
 - Email is opt-in, and every send/test action is explicit.
 
+## Settings and external connections
+
+Settings is a first-class destination for profile and study defaults, reusable
+AI connection profiles, transcript-storage preference, and Calendar management.
+Connection cards make the active provider visible and support an explicit test.
+Only provider metadata is durable: session API keys remain in memory, while a
+self-hosted deployment may supply server secrets.
+
+Calendar removal uses a deliberate danger-zone flow. The learner selects one
+playlist, sees the number of future sessions, types its exact name, and prepares
+a precise Codex request. The app marks the removal as pending; it never claims
+deletion succeeded. Google Calendar must preview exact matches and receive
+explicit approval, while past and unrelated events remain untouched.
+
 ## Implementation sequence
 
 1. Extend the versioned project contract with completion timestamps, AI
@@ -148,4 +162,5 @@ motions create personality while preserving contrast and fast scanning.
 3. Build the video workspace and embedded player.
 4. Add reports and the clickable learning path.
 5. Add the notification center and preferences.
-6. Apply the new palette/type/motion system and validate the complete flow.
+6. Add user settings, reusable external-AI profiles, and safe Calendar cleanup.
+7. Apply the new palette/type/motion system and validate the complete flow.

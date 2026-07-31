@@ -95,6 +95,8 @@ export type PlaylistStudyProject = {
     syncState: "not-connected" | "in-sync" | "changes-pending";
     pendingChangeCount: number;
     lastSyncedAt: string | null;
+    pendingAction?: "sync" | "remove";
+    removalRequestedAt?: string | null;
   };
   notificationPreferences?: NotificationPreferences;
   notifications?: StudyNotification[];

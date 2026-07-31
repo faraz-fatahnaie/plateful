@@ -16,7 +16,7 @@ schema version is `1`.
 | `policy` | Timezone, capacities, excluded days, priorities, and splitting rule. |
 | `videos` | Verified episode inventory plus watched timestamp, practiced, note, transcript, and optional AI artifact state. |
 | `sessions` | Current date-by-date plan. |
-| `calendar` | Provider, target calendar, sync status, and pending-change count. |
+| `calendar` | Provider, target calendar, sync status, pending-change count, and optional pending action/removal-request timestamp. |
 | `notificationPreferences` | Opt-in in-app/email reminder policy; contains no mail credentials. |
 | `notifications` | Durable in-app notification inbox and read state. |
 | `updatedAt` | ISO-8601 last-modified timestamp. |
@@ -34,6 +34,8 @@ The TypeScript definition is in `lib/playlist-study.ts`.
 - AI output is stored in `videos[].aiArtifacts`; a learner's `note` remains
   independent unless they explicitly append generated material.
 - Past Calendar events remain history. Only future playlist events are replaced.
+- A Calendar removal request is pending state, not proof of deletion. The
+  connected Calendar workflow must preview exact matches and obtain approval.
 - A skill must preserve unknown fields so newer app versions remain compatible.
 - Playlist metadata must be verified from YouTube; never invent titles or
   durations.
@@ -48,6 +50,11 @@ files.
 Production data belongs in the private Sites D1 database. Google Calendar
 changes run through the user's connected Codex Calendar tool after an explicit
 preview. This keeps Google OAuth credentials out of the public app.
+
+App-level preferences use a separate, user-scoped `user_settings` D1 row. The
+settings payload contains study defaults and AI connection metadata, but never
+API keys. Session keys stay in memory; server-managed keys stay in deployment
+secrets.
 
 ## Minimal planning intake
 

@@ -23,9 +23,9 @@ import {
   WandSparkles,
 } from "lucide-react";
 import type { AIStudyArtifacts, PlaylistStudyProject, StudyVideo } from "../../lib/playlist-study";
+import type { AIConnection, AIProvider } from "../../lib/app-settings";
 import { formatDuration } from "../../lib/playlist-study";
 
-type Provider = "ollama" | "openai" | "compatible";
 type WorkspaceTab = "overview" | "ai" | "notes";
 
 function youtubeId(value: string) {
@@ -50,6 +50,9 @@ export default function VideoWorkspace({
   onToggleWatched,
   onSaveVideo,
   onOpenVideo,
+  aiConnection,
+  aiApiKey = "",
+  persistTranscript = true,
 }: {
   project: PlaylistStudyProject;
   video: StudyVideo;
@@ -57,15 +60,19 @@ export default function VideoWorkspace({
   onToggleWatched: (videoId: string) => void;
   onSaveVideo: (video: StudyVideo) => void;
   onOpenVideo: (video: StudyVideo) => void;
+  aiConnection?: AIConnection;
+  aiApiKey?: string;
+  persistTranscript?: boolean;
 }) {
   const [tab, setTab] = useState<WorkspaceTab>(video.aiArtifacts ? "ai" : "overview");
   const [note, setNote] = useState(video.note);
   const [transcript, setTranscript] = useState(video.transcript || "");
   const [transcriptSource, setTranscriptSource] = useState<AIStudyArtifacts["transcriptSource"]>(video.transcript ? "pasted" : "youtube-captions");
-  const [provider, setProvider] = useState<Provider>("ollama");
-  const [model, setModel] = useState("gemma3");
-  const [baseUrl, setBaseUrl] = useState("http://localhost:11434");
-  const [apiKey, setApiKey] = useState("");
+  const [provider, setProvider] = useState<AIProvider>(aiConnection?.provider || "ollama");
+  const [model, setModel] = useState(aiConnection?.model || "gemma3");
+  const [baseUrl, setBaseUrl] = useState(aiConnection?.baseUrl || "http://localhost:11434");
+  const [apiKey, setApiKey] = useState(aiApiKey);
+  const [credentialMode, setCredentialMode] = useState<AIConnection["credentialMode"]>(aiConnection?.credentialMode || "session");
   const [aiBusy, setAiBusy] = useState(false);
   const [transcriptBusy, setTranscriptBusy] = useState(false);
   const [message, setMessage] = useState("");
@@ -96,8 +103,9 @@ export default function VideoWorkspace({
     ].join("\n");
   }, [video.aiArtifacts]);
 
-  function providerDefaults(value: Provider) {
+  function providerDefaults(value: AIProvider) {
     setProvider(value);
+    setCredentialMode("session");
     if (value === "ollama") {
       setModel("gemma3");
       setBaseUrl("http://localhost:11434");
@@ -123,8 +131,8 @@ export default function VideoWorkspace({
       if (!response.ok || !payload.transcript) throw new Error(payload.error || "Captions unavailable");
       setTranscript(payload.transcript);
       setTranscriptSource("youtube-captions");
-      onSaveVideo({ ...video, transcript: payload.transcript });
-      setMessage("Public captions loaded. Review them before generating study material.");
+      if (persistTranscript) onSaveVideo({ ...video, transcript: payload.transcript });
+      setMessage(`Public captions loaded${persistTranscript ? " and saved" : " for this session only"}. Review them before generating study material.`);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Captions unavailable. Paste a transcript instead.");
     } finally {
@@ -143,11 +151,11 @@ export default function VideoWorkspace({
       const response = await fetch("/api/ai/analyze", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ provider, model, baseUrl, apiKey, title: video.title, topic: video.topic, transcript, transcriptSource }),
+        body: JSON.stringify({ provider, model, baseUrl, apiKey, credentialMode, title: video.title, topic: video.topic, transcript, transcriptSource }),
       });
       const payload = (await response.json()) as { artifacts?: AIStudyArtifacts; error?: string };
       if (!response.ok || !payload.artifacts) throw new Error(payload.error || "AI analysis failed");
-      onSaveVideo({ ...video, transcript, aiArtifacts: payload.artifacts });
+      onSaveVideo({ ...video, transcript: persistTranscript ? transcript : undefined, aiArtifacts: payload.artifacts });
       setTab("ai");
       setMessage("Study pack created. Your personal note is still separate and unchanged.");
     } catch (error) {
@@ -231,12 +239,13 @@ export default function VideoWorkspace({
         <div className="ai-studio workspace-panel">
           <article className="ai-control-card">
             <div className="ai-card-heading"><span><Bot size={21} /></span><div><p className="eyebrow">Bring your own AI</p><h3>Create a study pack</h3></div></div>
+            {aiConnection && <div className="active-ai-connection"><CheckCircle2 size={14} /><span>Using Settings connection: <strong>{aiConnection.name}</strong></span></div>}
             <div className="provider-switcher">
               <button className={provider === "ollama" ? "active" : ""} onClick={() => providerDefaults("ollama")}>Ollama <small>free · local</small></button>
               <button className={provider === "openai" ? "active" : ""} onClick={() => providerDefaults("openai")}>OpenAI API <small>usage billed</small></button>
               <button className={provider === "compatible" ? "active" : ""} onClick={() => providerDefaults("compatible")}>Compatible <small>advanced</small></button>
             </div>
-            <div className="ai-fields"><label>Model<input value={model} onChange={(event) => setModel(event.target.value)} placeholder="gemma3" /></label><label>Endpoint<input value={baseUrl} onChange={(event) => setBaseUrl(event.target.value)} /></label>{provider !== "ollama" && <label>API key <span>used once, never saved</span><div className="secret-input"><KeyRound size={14} /><input type="password" value={apiKey} onChange={(event) => setApiKey(event.target.value)} placeholder="••••••••••" autoComplete="off" /></div></label>}</div>
+            <div className="ai-fields"><label>Model<input value={model} onChange={(event) => setModel(event.target.value)} placeholder="gemma3" /></label><label>Endpoint<input value={baseUrl} onChange={(event) => setBaseUrl(event.target.value)} /></label>{provider !== "ollama" && credentialMode === "session" && <label>API key <span>used once, never saved</span><div className="secret-input"><KeyRound size={14} /><input type="password" value={apiKey} onChange={(event) => setApiKey(event.target.value)} placeholder="••••••••••" autoComplete="off" /></div></label>}{provider !== "ollama" && credentialMode === "server" && <p className="server-key-ready">Using the server-managed secret configured in Settings.</p>}</div>
             {provider === "openai" && <p className="provider-caveat">A ChatGPT subscription is separate from API access. Connect with an OpenAI API key, or choose local Ollama for a no-cloud option.</p>}
             <div className="transcript-heading"><div><strong>Video transcript</strong><small>AI analyzes this text—not the video stream.</small></div><button onClick={loadTranscript} disabled={transcriptBusy}>{transcriptBusy ? <LoaderCircle className="spin" size={14} /> : <RefreshCw size={14} />}Try captions</button></div>
             <textarea className="transcript-editor" value={transcript} onChange={(event) => { setTranscript(event.target.value); setTranscriptSource("pasted"); }} placeholder="Load public captions or paste the transcript here…" />

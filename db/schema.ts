@@ -10,3 +10,9 @@ export const playlistProjects = sqliteTable("playlist_projects", {
   createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
   updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 });
+
+export const userSettings = sqliteTable("user_settings", {
+  ownerEmail: text("owner_email").primaryKey(),
+  payload: text("payload").notNull(),
+  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+});

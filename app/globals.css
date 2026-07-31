@@ -17,6 +17,64 @@
   --shadow: 0 18px 52px rgba(35, 60, 48, 0.1);
 }
 
+/* Settings */
+.settings-view { display: grid; gap: 18px; }
+.settings-lead { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; padding: 22px 24px; border: 1px solid var(--line); border-radius: 18px; background: linear-gradient(125deg, var(--card), #edf7ef); box-shadow: var(--shadow); }
+.settings-lead h2 { margin: 4px 0 7px; font: 650 29px/1.1 "Fraunces Variable", serif; }
+.settings-lead p:last-child { margin: 0; color: var(--muted); font-size: 9px; }
+.settings-layout { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.settings-card { min-width: 0; padding: 20px; border: 1px solid var(--line); border-radius: 17px; background: var(--card); box-shadow: 0 12px 30px rgba(30, 55, 43, .06); }
+.settings-span-two { grid-column: 1 / -1; }
+.settings-section-head { display: flex; align-items: center; gap: 11px; margin-bottom: 17px; }
+.settings-section-head > span { width: 39px; height: 39px; display: grid; flex: 0 0 auto; place-items: center; border-radius: 12px; color: var(--green); background: var(--green-soft); }
+.settings-section-head > div { flex: 1; }
+.settings-section-head h3 { margin: 0 0 4px; font: 650 19px/1.1 "Fraunces Variable", serif; }
+.settings-section-head p { margin: 0; color: var(--muted); font-size: 8px; }
+.settings-form-grid, .connection-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 11px; }
+.settings-form-grid label, .connection-fields label, .calendar-management > label, .confirm-name { display: grid; gap: 6px; color: #52635b; font-size: 8px; font-weight: 800; letter-spacing: .45px; text-transform: uppercase; }
+.settings-form-grid input, .settings-form-grid select, .connection-fields input, .connection-fields select, .calendar-management select, .confirm-name input { width: 100%; height: 39px; padding: 0 11px; border: 1px solid #d5ddd6; border-radius: 9px; outline: none; color: var(--ink); background: #fff; font: 600 9px/1 "Manrope Variable", sans-serif; }
+.settings-form-grid input:focus, .settings-form-grid select:focus, .connection-fields input:focus, .connection-fields select:focus, .calendar-management select:focus, .confirm-name input:focus { border-color: var(--green); box-shadow: 0 0 0 3px rgba(8,118,83,.1); }
+.settings-check { grid-template-columns: 17px 1fr !important; align-items: center; align-self: end; min-height: 39px; padding: 7px 10px; border: 1px solid var(--line); border-radius: 9px; text-transform: none !important; letter-spacing: 0 !important; }
+.settings-check input { width: 16px; height: 16px; padding: 0; accent-color: var(--green); }
+.settings-check span { display: grid; gap: 2px; }.settings-check strong { font-size: 8px; }.settings-check small { color: var(--muted); font-size: 7px; font-weight: 500; }
+.connection-list { display: grid; gap: 11px; }
+.connection-card { padding: 15px; border: 1px solid var(--line); border-radius: 14px; background: #fbfcf9; transition: border-color .2s ease, box-shadow .2s ease; }
+.connection-card.active { border-color: rgba(8,118,83,.5); box-shadow: inset 3px 0 0 var(--green), 0 10px 24px rgba(8,118,83,.06); }
+.connection-title { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 13px; }
+.radio-title { display: flex; align-items: center; gap: 9px; cursor: pointer; }.radio-title input { accent-color: var(--green); }.radio-title span { display: grid; gap: 2px; }.radio-title strong { font-size: 10px; }.radio-title small { color: var(--muted); font-size: 7px; }
+.provider-pill { padding: 5px 8px; border-radius: 99px; color: #54645c; background: #e8ece7; font-size: 7px; font-weight: 900; text-transform: uppercase; }.provider-pill.ollama { color: #285e4a; background: #d9eee1; }.provider-pill.openai { color: #554774; background: #ebe4f8; }
+.server-secret { display: flex; align-items: center; gap: 9px; align-self: end; min-height: 39px; padding: 7px 10px; border: 1px dashed #b8c9bc; border-radius: 9px; color: var(--green-dark); background: var(--green-soft); }.server-secret span { display: grid; gap: 2px; }.server-secret strong { font-size: 8px; }.server-secret small { color: var(--muted); font-size: 7px; }
+.connection-actions { display: flex; align-items: center; justify-content: flex-end; gap: 9px; margin-top: 12px; }.connection-actions .secondary-button { display: flex; align-items: center; gap: 6px; }
+.connection-result { flex: 1; display: flex; align-items: center; gap: 5px; color: var(--muted); font-size: 8px; }.connection-result.ok { color: var(--green); }.connection-result.error { color: #a14837; }
+.danger-text { display: flex; align-items: center; gap: 4px; color: #a14837 !important; }
+.settings-empty { min-height: 120px; display: grid; place-items: center; align-content: center; gap: 5px; border: 1px dashed var(--line); border-radius: 13px; color: var(--muted); }.settings-empty strong { color: var(--ink); font-size: 9px; }.settings-empty small { font-size: 8px; }
+.privacy-callout { display: flex; gap: 9px; margin-top: 13px; padding: 10px 12px; border-radius: 10px; color: var(--green-dark); background: var(--green-soft); }.privacy-callout svg { flex: 0 0 auto; }.privacy-callout p { margin: 0; font-size: 8px; line-height: 1.5; }
+.active-ai-connection { display: flex; align-items: center; gap: 6px; margin: 9px 0 12px; padding: 8px 10px; border-radius: 8px; color: var(--green-dark); background: var(--green-soft); font-size: 8px; }.server-key-ready { align-self: end; min-height: 37px; display: flex; align-items: center; margin: 0; padding: 8px 10px; border-radius: 8px; color: var(--green-dark); background: var(--green-soft); font-size: 8px; }
+.calendar-danger-card { border-color: #edd5cd; background: linear-gradient(120deg, #fff, #fff9f6); }
+.calendar-danger-card .settings-section-head > span { color: #a14837; background: #f8e4dc; }
+.calendar-management { display: grid; grid-template-columns: minmax(220px, .8fr) minmax(300px, 1.4fr) auto; align-items: end; gap: 13px; }
+.calendar-removal-summary { min-height: 39px; display: grid; grid-template-columns: repeat(3, 1fr); overflow: hidden; border: 1px solid var(--line); border-radius: 9px; background: white; }.calendar-removal-summary span { display: grid; place-items: center; align-content: center; gap: 1px; padding: 5px 9px; border-right: 1px solid var(--line); }.calendar-removal-summary span:last-child { border-right: 0; }.calendar-removal-summary strong { font-size: 9px; }.calendar-removal-summary small { color: var(--muted); font-size: 7px; }
+.danger-button { min-height: 39px; display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding: 0 14px; border: 1px solid #a94d39; border-radius: 9px; color: white; background: #a94d39; font-size: 8px; font-weight: 850; cursor: pointer; }.danger-button:hover { background: #8f3f2e; }.danger-button:disabled { cursor: not-allowed; opacity: .45; }
+.calendar-safety, .pending-removal { margin: 12px 0 0; color: var(--muted); font-size: 8px; line-height: 1.5; }.pending-removal { grid-column: 1 / -1; margin: 0; padding: 9px 11px; border-radius: 8px; color: #7a5c13; background: #fbefc7; }
+.calendar-confirm { width: min(590px, calc(100% - 28px)); }.removal-boundary { display: grid; grid-template-columns: 95px 1fr; gap: 8px 12px; margin: 18px 0; padding: 13px; border: 1px solid #edd5cd; border-radius: 11px; background: #fff9f6; font-size: 8px; line-height: 1.5; }.removal-boundary strong { color: #8f3f2e; }.removal-boundary span { color: var(--muted); }.confirm-name { margin-bottom: 16px; text-transform: none; letter-spacing: 0; }.confirm-name strong { color: var(--ink); }
+
+@media (max-width: 900px) {
+  .settings-layout { grid-template-columns: 1fr; }
+  .settings-span-two { grid-column: auto; }
+  .calendar-management { grid-template-columns: 1fr; }
+  .settings-form-grid, .connection-fields { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 600px) {
+  .settings-lead { align-items: stretch; flex-direction: column; }
+  .settings-lead .primary-button { width: 100%; }
+  .settings-section-head { align-items: flex-start; flex-wrap: wrap; }
+  .settings-section-head .secondary-button { width: 100%; }
+  .connection-actions { align-items: stretch; flex-wrap: wrap; }
+  .connection-result { flex-basis: 100%; }
+  .connection-actions .secondary-button { flex: 1; justify-content: center; }
+}
+
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; }
 body { margin: 0; background: var(--canvas); color: var(--ink); font-family: "Manrope Variable", "Segoe UI", Arial, sans-serif; }

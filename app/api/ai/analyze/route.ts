@@ -44,7 +44,16 @@ type AnalyzeRequest = {
   topic?: string;
   transcript?: string;
   transcriptSource?: AIStudyArtifacts["transcriptSource"];
+  credentialMode?: "session" | "server";
 };
+
+async function resolveApiKey(provider: "openai" | "compatible", input: AnalyzeRequest) {
+  if (input.apiKey?.trim()) return input.apiKey.trim();
+  if (input.credentialMode !== "server") return "";
+  const { env } = await import("cloudflare:workers");
+  const bindings = env as unknown as { OPENAI_API_KEY?: string; COMPATIBLE_AI_API_KEY?: string };
+  return provider === "openai" ? bindings.OPENAI_API_KEY || "" : bindings.COMPATIBLE_AI_API_KEY || "";
+}
 
 function safeBaseUrl(value: string, fallback: string) {
   const url = new URL(value || fallback);
@@ -120,11 +129,12 @@ export async function POST(request: Request) {
       const payload = (await response.json()) as { message?: { content?: string } };
       responseText = payload.message?.content || "";
     } else if (provider === "openai") {
-      if (!input.apiKey?.trim()) return Response.json({ error: "An OpenAI API key is required" }, { status: 400 });
+      const apiKey = await resolveApiKey("openai", input);
+      if (!apiKey) return Response.json({ error: input.credentialMode === "server" ? "OPENAI_API_KEY is not configured on the server" : "An OpenAI API key is required" }, { status: 400 });
       const baseUrl = safeBaseUrl(input.baseUrl || "", "https://api.openai.com/v1");
       const response = await fetch(`${baseUrl}/responses`, {
         method: "POST",
-        headers: { "content-type": "application/json", authorization: `Bearer ${input.apiKey.trim()}` },
+        headers: { "content-type": "application/json", authorization: `Bearer ${apiKey}` },
         body: JSON.stringify({
           model,
           store: false,
@@ -138,11 +148,12 @@ export async function POST(request: Request) {
       }
       responseText = extractOpenAIText((await response.json()) as Record<string, unknown>);
     } else {
-      if (!input.apiKey?.trim()) return Response.json({ error: "An API key is required" }, { status: 400 });
+      const apiKey = await resolveApiKey("compatible", input);
+      if (!apiKey) return Response.json({ error: input.credentialMode === "server" ? "COMPATIBLE_AI_API_KEY is not configured on the server" : "An API key is required" }, { status: 400 });
       const baseUrl = safeBaseUrl(input.baseUrl || "", "https://api.openai.com/v1");
       const response = await fetch(`${baseUrl}/chat/completions`, {
         method: "POST",
-        headers: { "content-type": "application/json", authorization: `Bearer ${input.apiKey.trim()}` },
+        headers: { "content-type": "application/json", authorization: `Bearer ${apiKey}` },
         body: JSON.stringify({
           model,
           temperature: 0.1,

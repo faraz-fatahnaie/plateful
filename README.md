@@ -18,6 +18,8 @@ data, notes, account, and Calendar credentials remain private.
 6. Optionally analyze captions with an OpenAI API key or free local Ollama.
 7. Review reports, milestones, and notifications.
 8. Preview a reconciliation request before Codex updates future Calendar blocks.
+9. Use Settings to manage defaults, external AI profiles, and playlist-specific
+   Calendar cleanup.
 
 ## What the app includes
 
@@ -39,6 +41,9 @@ data, notes, account, and Calendar credentials remain private.
 - portable JSON export;
 - safe Calendar handoff that never stores Google OAuth secrets;
 - installable `plan-youtube-playlist-study` Codex skill.
+- account-scoped app settings with connection testing and secret-safe AI profiles;
+- a confirmed “Remove playlist from Calendar” handoff that targets only future
+  matching events and preserves history.
 
 ## Repository map
 
@@ -49,6 +54,7 @@ data, notes, account, and Calendar credentials remain private.
 | `app/components/VideoWorkspace.tsx` | Embedded player, video details, notes, and AI studio |
 | `app/components/ReportsView.tsx` | Productivity and learning-quality reports |
 | `app/components/NotificationCenter.tsx` | In-app and email reminder preferences |
+| `app/components/SettingsView.tsx` | Study defaults, AI connections, and Calendar management |
 | `app/components/GuideView.tsx` | Interactive in-product guide and progress routine |
 | `lib/playlist-study.ts` | Shared version-1 data contract and scheduling helpers |
 | `lib/lpic-roadmap.ts` | Complete 55-session LPIC sample roadmap |
@@ -71,10 +77,12 @@ See [SECURITY.md](SECURITY.md) before deploying or contributing.
 
 - Local Ollama needs no cloud key; enter the local endpoint and installed model
   in the video workspace.
-- OpenAI uses an API key for the current request. ChatGPT subscriptions and API
+- OpenAI uses an API key held in browser memory, or the self-hosted server can
+  provide `OPENAI_API_KEY`. ChatGPT subscriptions and API
   billing are separate, so the app does not offer a misleading “Sign in with
   ChatGPT” control.
 - AI keys are never written to D1 or project JSON.
+- Compatible providers can use `COMPATIBLE_AI_API_KEY` as a server secret.
 - Email reminders can be delivered to Gmail or any address after the self-hosted
   server configures `RESEND_API_KEY` and `NOTIFICATION_FROM_EMAIL`.
 - A future scheduler can call the existing email endpoint at the preferred lead
