@@ -27,11 +27,22 @@ future schedule aligned with completed-video checkboxes.
    - Use reasonable defaults when low-risk; state them before creating events.
 
 3. Organize by subject.
-   - Derive stable topic names from titles and playlist structure.
+   - Read the project's `topicOrganization.preferredMethod`; default to
+     `publisher` when it is missing.
+   - For `publisher`, preserve useful playlist sections, chapters, modules, or
+     other creator-supplied grouping as `videos[].publisherTopic` and use it as
+     the initial `videos[].topic`.
+   - For `ai`, classify only the verified episode inventory and available
+     publisher labels. Every episode must appear exactly once.
+   - For `manual`, preserve the user's topic names, episode assignments, and
+     priority order instead of regenerating them.
    - Prefer the user's intended subject over an incorrect module number.
    - Keep episode order within each topic.
    - Apply priority topics first, followed by remaining episodes in original
      playlist order.
+   - Record `videos[].topicSource` and update `topicOrganization`. Generated
+     publisher or AI results are suggestions: never prevent the user from
+     renaming, reordering, reprioritizing, or reassigning topics afterward.
 
 4. Build the requested tracker.
    - For the Plateful web app, read

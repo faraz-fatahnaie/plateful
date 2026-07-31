@@ -82,6 +82,22 @@ Reports answer practical questions rather than producing decorative charts:
 The report uses scheduled duration plus `watched` and `watchedAt` values. Empty
 states explain that reports become more accurate as videos are checked.
 
+## Topic organization
+
+Topic extraction is a reversible three-path workflow:
+
+1. **Publisher structure (default):** use meaningful playlist sections,
+   chapters, modules, or creator labels captured during verified inventory.
+2. **AI classification:** send episode IDs, titles, and available publisher
+   labels to the user's selected AI connection; personal notes are excluded.
+3. **Manual organization:** let the learner define topics and assignments from
+   scratch.
+
+Every path ends in the same editor. Learners can rename and reorder topics,
+mark priority topics, and reassign any episode. The project preserves the
+publisher baseline and latest generation source while recording that the user
+edited the result. User edits are the final authority.
+
 ## Gamified roadmap
 
 The default roadmap frame is a vertical learning path grouped by topic. Each

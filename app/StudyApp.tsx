@@ -18,6 +18,7 @@ import {
   Search,
   Settings2,
   ShieldCheck,
+  Tags,
 } from "lucide-react";
 import GuideView from "./components/GuideView";
 import GlobalSearch from "./components/GlobalSearch";
@@ -28,6 +29,7 @@ import ReportsView from "./components/ReportsView";
 import RoadmapView from "./components/RoadmapView";
 import SettingsView from "./components/SettingsView";
 import VideoWorkspace from "./components/VideoWorkspace";
+import TopicOrganizer from "./components/TopicOrganizer";
 import { cloneDefaultSettings, type AppSettings } from "../lib/app-settings";
 import type { AccountSnapshot } from "../lib/account";
 import { languageProps, matchesSearch, videoMatchesSearch } from "../lib/discovery";
@@ -83,6 +85,7 @@ export default function StudyApp() {
   const [noteDraft, setNoteDraft] = useState("");
   const [showAdd, setShowAdd] = useState(false);
   const [showReplan, setShowReplan] = useState(false);
+  const [showTopicOrganizer, setShowTopicOrganizer] = useState(false);
   const [notice, setNotice] = useState("");
   const [activeTab, setActiveTab] = useState<AppTab>("today");
   const [previousTab, setPreviousTab] = useState<AppTab>("today");
@@ -146,7 +149,7 @@ export default function StudyApp() {
   }), [noteFilter, noteQuery, noteSort, project.videos]);
 
   const topics = useMemo(() => {
-    const names = Array.from(new Set(project.videos.map((video) => video.topic)));
+    const names = Array.from(new Set([...project.policy.priorities, ...project.videos.map((video) => video.topic)]));
     return names.map((name) => {
       const videos = project.videos.filter((video) => video.topic === name);
       const done = videos.filter((video) => video.watched).length;
@@ -473,6 +476,13 @@ export default function StudyApp() {
           .filter(Boolean),
         doNotSplitVideos: true,
       },
+      topicOrganization: {
+        preferredMethod: String(data.get("topicMethod") || "publisher") as "publisher" | "ai" | "manual",
+        lastGeneratedBy: null,
+        publisherSegmentsDetected: false,
+        userEdited: false,
+        updatedAt: null,
+      },
       videos: [],
       sessions: [],
       calendar: {
@@ -597,7 +607,8 @@ export default function StudyApp() {
             )}
 
             <section id="library" className="topic-section">
-              <div className="section-heading"><div><p className="eyebrow">Study map</p><h2>Priority topics</h2></div><button className="text-button button-with-icon" type="button" onClick={exportProject}>Export JSON <ExternalLink size={12} /></button></div>
+              <div className="section-heading"><div><p className="eyebrow">Study map</p><h2>Priority topics</h2></div><div className="section-actions"><button className="secondary-button button-with-icon" type="button" onClick={() => setShowTopicOrganizer(true)}><Tags size={13} />Organize topics</button><button className="text-button button-with-icon" type="button" onClick={exportProject}>Export JSON <ExternalLink size={12} /></button></div></div>
+              <div className="topic-provenance"><span>{project.topicOrganization?.lastGeneratedBy === "ai" ? "AI classified" : project.topicOrganization?.lastGeneratedBy === "manual" ? "Manually organized" : "Publisher structure"}</span>{project.topicOrganization?.userEdited && <span>Edited by you</span>}<small>All topics and priorities remain editable.</small></div>
               <div className="topic-grid">
                 {(topics.length ? topics : project.policy.priorities.map((name) => ({ name, done: 0, total: 0 }))).map((topic, index) => (
                   <article className="topic-card" key={topic.name}>
@@ -686,6 +697,7 @@ export default function StudyApp() {
 
       {showNotifications && <NotificationCenter project={project} onClose={() => setShowNotifications(false)} onUpdate={replaceProject} onNavigate={navigateFromNotification} />}
       {showGlobalSearch && <GlobalSearch projects={projects} onClose={() => setShowGlobalSearch(false)} onOpenProject={openGlobalProject} onOpenVideo={openGlobalVideo} onOpenSession={openGlobalSession} onOpenTopic={openGlobalTopic} />}
+      {showTopicOrganizer && <TopicOrganizer project={project} aiConnection={appSettings.aiConnections.find((item) => item.id === appSettings.activeAIConnectionId)} aiApiKey={appSettings.activeAIConnectionId ? aiSessionKeys[appSettings.activeAIConnectionId] || "" : ""} onSave={replaceProject} onClose={() => setShowTopicOrganizer(false)} />}
 
       {showAdd && (
         <div className="modal-backdrop" role="presentation">
@@ -701,6 +713,7 @@ export default function StudyApp() {
               <label>Study time<input name="startTime" type="time" defaultValue={appSettings.defaultStudyTime} /></label>
               <label>Timezone<input name="timezone" defaultValue={appSettings.timezone} /></label>
               <label>Excluded weekdays<input name="excluded" defaultValue="Thursday" /></label>
+              <label>Topic organization<select name="topicMethod" defaultValue="publisher"><option value="publisher">Publisher structure (recommended)</option><option value="ai">Classify with my AI connection</option><option value="manual">I will organize topics</option></select></label>
               <label>Priority topics<input name="priorities" placeholder="Network, disks" dir="auto" /></label>
               <label className="span-two">Other preferences<textarea name="preferences" rows={2} placeholder="Do not split videos; use Fridays for labs…" dir="auto" /></label>
             </div>

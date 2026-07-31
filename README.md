@@ -12,13 +12,15 @@ data, notes, account, and Calendar credentials remain private.
 1. Add a playlist URL, goal, time budget, days off, and priority topics.
 2. Export the fixed `*.playlist-study.json` intake.
 3. Ask the bundled Codex skill to verify the playlist and complete the plan.
-4. Import or save the planned project in the private app.
-5. Open a video workspace, watch inside the app, add notes, and check only
+4. Review topics from publisher structure (default), AI classification, or your
+   own organization; edit names, priorities, and episode assignments.
+5. Import or save the planned project in the private app.
+6. Open a video workspace, watch inside the app, add notes, and check only
    completed episodes.
-6. Optionally analyze captions with an OpenAI API key or free local Ollama.
-7. Review reports, milestones, and notifications.
-8. Preview a reconciliation request before Codex updates future Calendar blocks.
-9. Use Settings to manage defaults, external AI profiles, and playlist-specific
+7. Optionally analyze captions with an OpenAI API key or free local Ollama.
+8. Review reports, milestones, and notifications.
+9. Preview a reconciliation request before Codex updates future Calendar blocks.
+10. Use Settings to manage defaults, external AI profiles, and playlist-specific
    Calendar cleanup.
 
 ## What the app includes
@@ -28,6 +30,8 @@ data, notes, account, and Calendar credentials remain private.
 - automatic RTL direction and bundled Vazirmatn typography for Persian content;
 - verified Google/Gmail identity with private cross-device account sync;
 - guided playlist intake;
+- editable publisher/AI/manual topic organization with provenance and priority
+  control;
 - daily watch queue and links;
 - privacy-enhanced embedded YouTube player and full video information workspace;
 - verified 81-video LPIC sample inventory with direct links and exact durations;
@@ -59,6 +63,7 @@ data, notes, account, and Calendar credentials remain private.
 | `app/components/ReportsView.tsx` | Productivity and learning-quality reports |
 | `app/components/NotificationCenter.tsx` | In-app and email reminder preferences |
 | `app/components/SettingsView.tsx` | Study defaults, AI connections, and Calendar management |
+| `app/components/TopicOrganizer.tsx` | Publisher, AI, and manual topic classification editor |
 | `app/components/GuideView.tsx` | Interactive in-product guide and progress routine |
 | `lib/playlist-study.ts` | Shared version-1 data contract and scheduling helpers |
 | `lib/lpic-roadmap.ts` | Complete 55-session LPIC sample roadmap |

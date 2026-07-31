@@ -14,6 +14,7 @@ schema version is `1`.
 | `status` | `planning`, `active`, `paused`, or `complete`. |
 | `totalVideoCount`, `totalDurationSeconds` | Verified inventory totals. |
 | `policy` | Timezone, capacities, excluded days, priorities, and splitting rule. |
+| `topicOrganization` | Preferred publisher/AI/manual workflow, latest baseline source, publisher availability, and user-edit state. |
 | `videos` | Verified episode inventory plus watched timestamp, practiced, note, transcript, and optional AI artifact state. |
 | `sessions` | Current date-by-date plan. |
 | `calendar` | Provider, target calendar, sync status, pending-change count, and optional pending action/removal-request timestamp. |
@@ -39,6 +40,12 @@ The TypeScript definition is in `lib/playlist-study.ts`.
 - A skill must preserve unknown fields so newer app versions remain compatible.
 - Playlist metadata must be verified from YouTube; never invent titles or
   durations.
+- Publisher grouping is the default topic baseline when playlist sections,
+  chapters, or creator labels are available. Preserve it in
+  `videos[].publisherTopic`; the editable assignment remains `videos[].topic`.
+- `videos[].topicSource` records publisher, AI, or manual assignment. No source
+  may lock the result: users can always rename, reorder, reprioritize, and
+  reassign topics.
 
 ## Privacy boundary
 
@@ -84,6 +91,13 @@ device. Google passwords and OAuth tokens are outside this data contract.
     "excludedWeekdays": ["Thursday"],
     "priorities": ["Networking", "Disks"],
     "doNotSplitVideos": true
+  },
+  "topicOrganization": {
+    "preferredMethod": "publisher",
+    "lastGeneratedBy": null,
+    "publisherSegmentsDetected": false,
+    "userEdited": false,
+    "updatedAt": null
   },
   "videos": [],
   "sessions": [],

@@ -19,7 +19,7 @@ import { buildSkillRequest, type PlaylistStudyProject } from "../../lib/playlist
 
 const steps = [
   { icon: CirclePlay, title: "Add a playlist", copy: "Paste the YouTube playlist, define your learning goal, available minutes, rest days, and priority topics." },
-  { icon: Sparkles, title: "Let the skill plan", copy: "Export the intake JSON. The Codex skill verifies every video, groups topics, and creates a duration-aware schedule." },
+  { icon: Sparkles, title: "Review the topic map", copy: "Start with publisher sections, ask your connected AI to classify the verified inventory, or organize it yourself. Every result stays editable." },
   { icon: ListChecks, title: "Study today’s queue", copy: "Open Today, watch only the assigned episodes, and reproduce one command or example before moving on." },
   { icon: ClipboardCheck, title: "Record real progress", copy: "Write a short episode note and check only videos you actually completed. The checkbox is the source of truth." },
   { icon: CalendarSync, title: "Reconcile Calendar", copy: "Preview future changes, then let Codex safely update upcoming Google Calendar blocks while preserving history." },
@@ -60,7 +60,7 @@ export default function GuideView({ project }: { project: PlaylistStudyProject }
             <strong>Practical tip</strong>
             <span>{[
               "Write priorities as topics, not guessed module numbers—e.g. “networking” and “disks.”",
-              "Never accept guessed durations. The finished inventory count and total runtime must match YouTube.",
+              "Publisher structure is the default. Rename, reprioritize, or reassign any topic before scheduling.",
               "Use Friday’s larger capacity for long episodes, catch-up, and hands-on labs.",
               "A video is done after watching, a short note, one reproduced example, and a checked box.",
               "Missed items stay unchecked; extra-watched items get checked. Reconciliation handles both cases.",

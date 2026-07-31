@@ -28,12 +28,25 @@ export type StudyVideo = {
   url: string;
   durationSeconds: number;
   topic: string;
+  publisherTopic?: string;
+  topicSource?: TopicMethod;
   watched: boolean;
   watchedAt?: string | null;
   note: string;
   practiced: boolean;
   transcript?: string;
   aiArtifacts?: AIStudyArtifacts;
+};
+
+export type TopicMethod = "publisher" | "ai" | "manual";
+
+export type TopicOrganization = {
+  preferredMethod: TopicMethod;
+  lastGeneratedBy: TopicMethod | null;
+  publisherSegmentsDetected: boolean;
+  userEdited: boolean;
+  aiProvider?: string;
+  updatedAt: string | null;
 };
 
 export type StudyNotification = {
@@ -87,6 +100,7 @@ export type PlaylistStudyProject = {
   totalVideoCount: number;
   totalDurationSeconds: number;
   policy: StudyPolicy;
+  topicOrganization?: TopicOrganization;
   videos: StudyVideo[];
   sessions: StudySession[];
   calendar: {
@@ -124,8 +138,17 @@ export const LPIC_SAMPLE: PlaylistStudyProject = {
     priorities: ["Networking fundamentals", "Linux installation and package management", "Devices, Linux filesystems, and FHS"],
     doNotSplitVideos: true,
   },
+  topicOrganization: {
+    preferredMethod: "publisher",
+    lastGeneratedBy: "publisher",
+    publisherSegmentsDetected: true,
+    userEdited: false,
+    updatedAt: "2026-07-31T11:20:00Z",
+  },
   videos: LPIC_VIDEO_DATA.map((video) => ({
     ...video,
+    publisherTopic: video.topic,
+    topicSource: "publisher" as const,
     id: `ep-${String(video.index).padStart(3, "0")}`,
     watched: false,
     watchedAt: null,
@@ -196,6 +219,7 @@ export function buildSkillRequest(project: PlaylistStudyProject): string {
     `Skip: ${project.policy.excludedWeekdays.join(", ") || "none"}.`,
     `Friday: ${project.policy.fridayMinutes} minutes; other days: ${project.policy.weekdayMinutes} minutes.`,
     `Priorities: ${project.policy.priorities.join("; ") || "playlist order"}.`,
+    `Topic method: ${project.topicOrganization?.preferredMethod || "publisher"}; preserve publisher labels and all user edits.`,
     "Preview future event changes before applying them.",
   ].join("\n");
 }

@@ -20,13 +20,18 @@ Use UTF-8 JSON:
     "skip_weekdays": ["Thursday"],
     "priority_topics": ["Networking", "Storage"]
   },
+  "topic_organization": {
+    "preferred_method": "publisher"
+  },
   "episodes": [
     {
       "index": 1,
       "title": "Episode title",
       "url": "https://www.youtube.com/watch?v=...",
       "duration": "12:34",
-      "topic": "Networking"
+      "publisher_topic": "Module 109: Networking",
+      "topic": "Networking",
+      "topic_source": "publisher"
     }
   ]
 }
@@ -37,6 +42,12 @@ Use UTF-8 JSON:
 - Use unique positive integer indexes.
 - Accept durations as MM:SS or HH:MM:SS.
 - Use one stable topic name per episode.
+- `preferred_method` is `publisher`, `ai`, or `manual`; use `publisher` by
+  default when the creator provides meaningful grouping.
+- Preserve creator-supplied grouping in `publisher_topic` even after a user or
+  AI changes `topic`.
+- `topic_source` records the latest assignment source. Topic names, priorities,
+  ordering, and per-episode assignments always remain user-editable.
 - Preserve exact YouTube titles and URLs.
 - Use English weekday names.
 - Use an IANA timezone.

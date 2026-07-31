@@ -209,3 +209,31 @@ test("supports broad external AI connections and a safe ChatGPT account handoff"
   assert.match(env, /OPENROUTER_API_KEY/);
   assert.match(security, /never asks for or stores a ChatGPT/);
 });
+
+test("ships editable publisher, AI, and manual topic organization", async () => {
+  const [contract, app, organizer, topicRoute, helpers, skill, skillContract, design] = await Promise.all([
+    source("lib/playlist-study.ts"),
+    source("app/StudyApp.tsx"),
+    source("app/components/TopicOrganizer.tsx"),
+    source("app/api/ai/topics/route.ts"),
+    source("lib/topic-organization.ts"),
+    source("skill/plan-youtube-playlist-study/SKILL.md"),
+    source("skill/plan-youtube-playlist-study/references/app-data-contract.md"),
+    source("docs/PRODUCT_DESIGN.md"),
+  ]);
+
+  assert.match(contract, /export type TopicMethod = "publisher" \| "ai" \| "manual"/);
+  assert.match(contract, /publisherTopic\?: string/);
+  assert.match(contract, /topicSource\?: TopicMethod/);
+  assert.match(app, /Publisher structure \(recommended\)/);
+  assert.match(app, /Organize topics/);
+  assert.match(organizer, /Apply publisher structure/);
+  assert.match(organizer, /Classify with AI/);
+  assert.match(organizer, /Episode assignments/);
+  assert.match(organizer, /Priority topics are scheduled first/);
+  assert.match(topicRoute, /topicClassificationSchema/);
+  assert.match(helpers, /Every video ID must appear exactly once/);
+  assert.match(skill, /publisher or AI results are suggestions/);
+  assert.match(skillContract, /Treat publisher and AI classifications as editable baselines/);
+  assert.match(design, /User edits are the final authority/);
+});
