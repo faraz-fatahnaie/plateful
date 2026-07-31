@@ -1,3 +1,5 @@
+import { LPIC_SESSIONS } from "./lpic-roadmap";
+
 export type PlaylistStatus = "active" | "paused" | "complete" | "planning";
 
 export type StudyVideo = {
@@ -17,6 +19,8 @@ export type StudySession = {
   date: string;
   videoIds: string[];
   plannedMinutes: number;
+  watchSeconds?: number;
+  module?: string;
   status: "planned" | "complete" | "missed";
 };
 
@@ -132,29 +136,7 @@ export const LPIC_SAMPLE: PlaylistStudyProject = {
       practiced: false,
     },
   ],
-  sessions: [
-    {
-      id: "session-2026-07-31",
-      date: "2026-07-31",
-      videoIds: ["ep-068", "ep-069", "ep-070"],
-      plannedMinutes: 48,
-      status: "planned",
-    },
-    {
-      id: "session-2026-08-01",
-      date: "2026-08-01",
-      videoIds: ["ep-071"],
-      plannedMinutes: 21,
-      status: "planned",
-    },
-    {
-      id: "session-2026-08-02",
-      date: "2026-08-02",
-      videoIds: ["ep-011"],
-      plannedMinutes: 19,
-      status: "planned",
-    },
-  ],
+  sessions: LPIC_SESSIONS,
   calendar: {
     provider: "google",
     calendarId: "primary",

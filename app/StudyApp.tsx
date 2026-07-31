@@ -2,6 +2,23 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import {
+  Bell,
+  ChevronDown,
+  CircleHelp,
+  Clock3,
+  ExternalLink,
+  FileDown,
+  Home,
+  Library,
+  NotebookPen,
+  Play,
+  Plus,
+  Route,
+  ShieldCheck,
+} from "lucide-react";
+import GuideView from "./components/GuideView";
+import RoadmapView from "./components/RoadmapView";
+import {
   buildSkillRequest,
   completedCount,
   formatDuration,
@@ -12,6 +29,15 @@ import {
 } from "../lib/playlist-study";
 
 type SaveState = "saved" | "saving" | "preview";
+type AppTab = "today" | "roadmap" | "playlists" | "notes" | "guide";
+
+const tabCopy: Record<AppTab, { eyebrow: string; title: string }> = {
+  today: { eyebrow: "Your next focused session", title: "Good afternoon, Faraz." },
+  roadmap: { eyebrow: "Day · week · month", title: "See the whole road ahead." },
+  playlists: { eyebrow: "Your learning library", title: "Every playlist, one system." },
+  notes: { eyebrow: "Your knowledge archive", title: "Turn watching into recall." },
+  guide: { eyebrow: "A five-step workflow", title: "Learn how to use Plateful." },
+};
 
 function cloneSample(): PlaylistStudyProject {
   return JSON.parse(JSON.stringify(LPIC_SAMPLE)) as PlaylistStudyProject;
@@ -34,6 +60,7 @@ export default function StudyApp() {
   const [showAdd, setShowAdd] = useState(false);
   const [showReplan, setShowReplan] = useState(false);
   const [notice, setNotice] = useState("");
+  const [activeTab, setActiveTab] = useState<AppTab>("today");
 
   const project =
     projects.find((candidate) => candidate.id === selectedId) ?? projects[0];
@@ -208,33 +235,34 @@ export default function StudyApp() {
           <span>Plateful</span>
         </div>
         <nav aria-label="Primary navigation">
-          <a className="nav-item active" href="#today"><span>◉</span>Today</a>
-          <a className="nav-item" href="#library"><span>▦</span>Playlists</a>
-          <a className="nav-item" href="#schedule"><span>□</span>Schedule</a>
-          <a className="nav-item" href="#notes"><span>≡</span>Notes</a>
+          <button className={`nav-item ${activeTab === "today" ? "active" : ""}`} type="button" onClick={() => setActiveTab("today")}><Home size={17} />Today</button>
+          <button className={`nav-item ${activeTab === "roadmap" ? "active" : ""}`} type="button" onClick={() => setActiveTab("roadmap")}><Route size={17} />Roadmap</button>
+          <button className={`nav-item ${activeTab === "playlists" ? "active" : ""}`} type="button" onClick={() => setActiveTab("playlists")}><Library size={17} />Playlists</button>
+          <button className={`nav-item ${activeTab === "notes" ? "active" : ""}`} type="button" onClick={() => setActiveTab("notes")}><NotebookPen size={17} />Notes</button>
+          <button className={`nav-item ${activeTab === "guide" ? "active" : ""}`} type="button" onClick={() => setActiveTab("guide")}><CircleHelp size={17} />How to use</button>
         </nav>
         <div className="sidebar-bottom">
-          <div className="privacy-note"><span>●</span><div><strong>Private workspace</strong><small>Your study data stays in your account.</small></div></div>
-          <button className="profile" type="button"><span className="avatar">F</span><span><strong>Faraz</strong><small>Asia/Tehran</small></span><span>⌄</span></button>
+          <div className="privacy-note"><ShieldCheck size={15} /><div><strong>Private workspace</strong><small>Your study data stays in your account.</small></div></div>
+          <button className="profile" type="button"><span className="avatar">F</span><span><strong>Faraz</strong><small>Asia/Tehran</small></span><ChevronDown size={15} /></button>
         </div>
       </aside>
 
       <section className="workspace">
         <header className="topbar">
           <div>
-            <p className="eyebrow">Friday, July 31</p>
-            <h1>Good afternoon, Faraz.</h1>
+            <p className="eyebrow">{tabCopy[activeTab].eyebrow}</p>
+            <h1>{tabCopy[activeTab].title}</h1>
           </div>
           <div className="top-actions">
             <span className={`save-state ${saveState}`}>{saveState === "saved" ? "Saved" : saveState === "saving" ? "Saving…" : "Preview data"}</span>
-            <button className="icon-button" aria-label="Notifications" type="button">○</button>
-            <button className="primary-button" type="button" onClick={() => setShowAdd(true)}>＋ Add playlist</button>
+            <button className="icon-button" aria-label="Notifications" type="button"><Bell size={17} /></button>
+            <button className="primary-button button-with-icon" type="button" onClick={() => setShowAdd(true)}><Plus size={16} />Add playlist</button>
           </div>
         </header>
 
         {notice && <button className="notice" type="button" onClick={() => setNotice("")}>{notice}<span>×</span></button>}
 
-        <div className="content-grid">
+        {activeTab === "today" && <div className="content-grid tab-panel">
           <section className="main-column" id="today">
             <article className="hero-card">
               <div className="hero-copy">
@@ -260,7 +288,7 @@ export default function StudyApp() {
               <article className="session-card">
                 <div className="section-heading">
                   <div><p className="eyebrow">Today’s session</p><h2>{sessionVideos.length} videos · {session.plannedMinutes} minutes</h2></div>
-                  <span className="time-chip">◷ {project.policy.startTime}</span>
+                  <span className="time-chip"><Clock3 size={13} />{project.policy.startTime}</span>
                 </div>
                 <div className="video-list">
                   {sessionVideos.map((video) => (
@@ -270,7 +298,7 @@ export default function StudyApp() {
                       <div className="video-copy"><strong>{video.title}</strong><span>{video.topic} · {formatDuration(video.durationSeconds)}</span></div>
                       {video.note && <span className="note-dot" title="Notes added">●</span>}
                       <button className="text-button" type="button" onClick={() => openNote(video)}>{video.note ? "Edit note" : "Add note"}</button>
-                      <a className="play-button" href={video.url} target="_blank" rel="noreferrer" aria-label={`Watch episode ${video.index}`}>▶</a>
+                      <a className="play-button" href={video.url} target="_blank" rel="noreferrer" aria-label={`Watch episode ${video.index}`}><Play size={12} fill="currentColor" /></a>
                     </div>
                   ))}
                 </div>
@@ -289,7 +317,7 @@ export default function StudyApp() {
             )}
 
             <section id="library" className="topic-section">
-              <div className="section-heading"><div><p className="eyebrow">Study map</p><h2>Priority topics</h2></div><button className="text-button" type="button" onClick={exportProject}>Export JSON ↗</button></div>
+              <div className="section-heading"><div><p className="eyebrow">Study map</p><h2>Priority topics</h2></div><button className="text-button button-with-icon" type="button" onClick={exportProject}>Export JSON <ExternalLink size={12} /></button></div>
               <div className="topic-grid">
                 {(topics.length ? topics : project.policy.priorities.map((name) => ({ name, done: 0, total: 0 }))).map((topic, index) => (
                   <article className="topic-card" key={topic.name}>
@@ -327,7 +355,36 @@ export default function StudyApp() {
               <div className="policy-row"><span>Timezone</span><strong>{project.policy.timezone}</strong></div>
             </article>
           </aside>
-        </div>
+        </div>}
+
+        {activeTab === "roadmap" && <RoadmapView project={project} />}
+
+        {activeTab === "playlists" && (
+          <section className="tab-panel library-view">
+            <div className="panel-intro"><div><p className="eyebrow">Playlist library</p><h2>Keep every learning journey in one place</h2><p>Each project carries its own verified inventory, study policy, notes, roadmap, and Calendar state.</p></div><button className="primary-button button-with-icon" type="button" onClick={() => setShowAdd(true)}><Plus size={16} />New playlist</button></div>
+            <div className="project-grid">
+              {projects.map((item, index) => {
+                const itemFinished = completedCount(item);
+                const itemProgress = item.totalVideoCount ? Math.round((itemFinished / item.totalVideoCount) * 100) : 0;
+                return <button className={`project-card color-project-${index % 3}`} key={item.id} type="button" onClick={() => { setSelectedId(item.id); setActiveTab("today"); }}><span className="project-card-icon"><Library size={20} /></span><span className="status-pill">{item.status}</span><h3>{item.title}</h3><p>{item.goal || "Waiting for the planning skill to complete this playlist."}</p><span className="project-card-progress"><i><b style={{ width: `${itemProgress}%` }} /></i><strong>{itemProgress}%</strong></span><span className="project-card-meta"><small>{item.totalVideoCount} videos</small><small>{item.sessions.length} study days</small><ExternalLink size={14} /></span></button>;
+              })}
+              <button className="project-card add-project-card" type="button" onClick={() => setShowAdd(true)}><span><Plus size={23} /></span><strong>Add another playlist</strong><small>Paste a link and set your study rules.</small></button>
+            </div>
+          </section>
+        )}
+
+        {activeTab === "notes" && (
+          <section className="tab-panel notes-view">
+            <div className="panel-intro"><div><p className="eyebrow">Episode notes</p><h2>Your searchable learning trail</h2><p>Review what each episode taught you, then fill the gaps while the idea is still fresh.</p></div><button className="secondary-button button-with-icon" type="button" onClick={exportProject}><FileDown size={15} />Export project</button></div>
+            <div className="notes-summary"><div><strong>{project.videos.filter((video) => video.note.trim()).length}</strong><span>notes written</span></div><div><strong>{project.videos.filter((video) => video.watched).length}</strong><span>videos watched</span></div><div><strong>{project.videos.filter((video) => video.watched && !video.note.trim()).length}</strong><span>notes to complete</span></div></div>
+            <div className="notes-list">
+              {project.videos.map((video) => <button className="note-list-row" type="button" key={video.id} onClick={() => openNote(video)}><span className={`note-status ${video.note.trim() ? "has-note" : ""}`}><NotebookPen size={16} /></span><span className="note-list-copy"><small>Episode {String(video.index).padStart(3, "0")} · {video.topic}</small><strong>{video.title}</strong><p>{video.note.trim() ? video.note.replace(/^#+\s*/gm, "").slice(0, 130) : "No note yet. Add 3–5 ideas, one command you tried, and one remaining question."}</p></span><span className="note-list-action">{video.note.trim() ? "Edit" : "Add note"}<ExternalLink size={13} /></span></button>)}
+              {!project.videos.length && <article className="empty-card"><span className="empty-mark"><NotebookPen size={24} /></span><h2>Notes begin after planning</h2><p>Once the playlist inventory is verified, every episode gets a dedicated note entry here.</p></article>}
+            </div>
+          </section>
+        )}
+
+        {activeTab === "guide" && <GuideView project={project} />}
       </section>
 
       {showAdd && (

@@ -48,3 +48,19 @@ test("separates public source from private user and Calendar data", async () => 
   assert.match(route, /oai-authenticated-user-email/);
   assert.match(route, /storageId = `\$\{email\}::\$\{project\.id\}`/);
 });
+
+test("includes the complete roadmap and an interactive user guide", async () => {
+  const [app, roadmap, guide, lpic] = await Promise.all([
+    source("app/StudyApp.tsx"),
+    source("app/components/RoadmapView.tsx"),
+    source("app/components/GuideView.tsx"),
+    source("lib/lpic-roadmap.ts"),
+  ]);
+
+  assert.match(app, /RoadmapView/);
+  assert.match(app, /How to use/);
+  assert.match(roadmap, /type Frame = "day" \| "week" \| "month"/);
+  assert.match(guide, /Missed a session/);
+  assert.match(guide, /Watched extra videos/);
+  assert.equal((lpic.match(/^  session\("/gm) ?? []).length, 55);
+});

@@ -16,11 +16,13 @@ data, notes, account, and Calendar credentials remain private.
 5. Watch today's videos, add notes, and check only completed episodes.
 6. Preview a reconciliation request before Codex updates future Calendar blocks.
 
-## What the first version includes
+## What the app includes
 
 - multi-playlist dashboard;
 - guided playlist intake;
 - daily watch queue and links;
+- complete day, week, and month roadmap views;
+- an interactive **How to use** tab with a five-step workflow;
 - per-video notes and watched state;
 - study policy and upcoming-session views;
 - durable, user-owned D1 storage;
@@ -33,7 +35,10 @@ data, notes, account, and Calendar credentials remain private.
 | Path | Purpose |
 |---|---|
 | `app/` | Product UI and authenticated API routes |
+| `app/components/RoadmapView.tsx` | Day, week, and month learning roadmap |
+| `app/components/GuideView.tsx` | Interactive in-product guide and progress routine |
 | `lib/playlist-study.ts` | Shared version-1 data contract and scheduling helpers |
+| `lib/lpic-roadmap.ts` | Complete 55-session LPIC sample roadmap |
 | `db/` and `drizzle/` | Durable D1 schema and migrations |
 | `docs/data-contract.md` | Public app/skill interchange specification |
 | `skill/plan-youtube-playlist-study/` | Reusable Codex skill package |
