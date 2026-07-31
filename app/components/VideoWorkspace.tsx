@@ -9,6 +9,7 @@ import {
   Check,
   CheckCircle2,
   Clock3,
+  Copy,
   ExternalLink,
   FileText,
   KeyRound,
@@ -20,10 +21,13 @@ import {
   RefreshCw,
   Save,
   Sparkles,
+  Upload,
   WandSparkles,
 } from "lucide-react";
 import type { AIStudyArtifacts, PlaylistStudyProject, StudyVideo } from "../../lib/playlist-study";
 import type { AIConnection, AIProvider } from "../../lib/app-settings";
+import { AI_PROVIDER_CATALOG, getAIProvider, providerAllowsKey, providerDefaults as getProviderDefaults } from "../../lib/ai-providers";
+import { buildStudyPrompt, parseStudyArtifacts } from "../../lib/ai-study";
 import { formatDuration } from "../../lib/playlist-study";
 import { languageProps } from "../../lib/discovery";
 
@@ -77,6 +81,7 @@ export default function VideoWorkspace({
   const [aiBusy, setAiBusy] = useState(false);
   const [transcriptBusy, setTranscriptBusy] = useState(false);
   const [message, setMessage] = useState("");
+  const [manualResponse, setManualResponse] = useState("");
 
   const session = project.sessions.find((item) => item.videoIds.includes(video.id));
   const position = session ? session.videoIds.indexOf(video.id) + 1 : 0;
@@ -104,19 +109,13 @@ export default function VideoWorkspace({
     ].join("\n");
   }, [video.aiArtifacts]);
 
-  function providerDefaults(value: AIProvider) {
+  function setProviderDefaults(value: AIProvider) {
+    const defaults = getProviderDefaults(value);
     setProvider(value);
-    setCredentialMode("session");
-    if (value === "ollama") {
-      setModel("gemma3");
-      setBaseUrl("http://localhost:11434");
-    } else if (value === "openai") {
-      setModel("gpt-5.6-luna");
-      setBaseUrl("https://api.openai.com/v1");
-    } else {
-      setModel("");
-      setBaseUrl("https://api.example.com/v1");
-    }
+    setApiKey("");
+    setCredentialMode(defaults.credentialMode);
+    setModel(defaults.model);
+    setBaseUrl(defaults.baseUrl);
   }
 
   async function loadTranscript() {
@@ -163,6 +162,29 @@ export default function VideoWorkspace({
       setMessage(error instanceof Error ? error.message : "AI analysis failed");
     } finally {
       setAiBusy(false);
+    }
+  }
+
+  async function copyManualRequest() {
+    if (!transcript.trim()) {
+      setMessage("Load captions or paste a transcript first.");
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(buildStudyPrompt({ title: video.title, topic: video.topic, transcript }));
+      setMessage("Structured request copied. Open ChatGPT, paste it, then bring the JSON response back here.");
+    } catch {
+      setMessage("Clipboard access was blocked. Select and copy the prepared request manually.");
+    }
+  }
+
+  function importManualResponse() {
+    try {
+      const artifacts: AIStudyArtifacts = { ...parseStudyArtifacts(manualResponse), provider: "chatgpt-manual", model: model || "ChatGPT", generatedAt: new Date().toISOString(), transcriptSource };
+      onSaveVideo({ ...video, transcript: persistTranscript ? transcript : undefined, aiArtifacts: artifacts });
+      setMessage("ChatGPT study pack imported. Your personal note is still separate and unchanged.");
+    } catch (error) {
+      setMessage(error instanceof Error ? `Could not import: ${error.message}` : "Could not import the ChatGPT response.");
     }
   }
 
@@ -241,16 +263,13 @@ export default function VideoWorkspace({
           <article className="ai-control-card">
             <div className="ai-card-heading"><span><Bot size={21} /></span><div><p className="eyebrow">Bring your own AI</p><h3>Create a study pack</h3></div></div>
             {aiConnection && <div className="active-ai-connection"><CheckCircle2 size={14} /><span>Using Settings connection: <strong>{aiConnection.name}</strong></span></div>}
-            <div className="provider-switcher">
-              <button className={provider === "ollama" ? "active" : ""} onClick={() => providerDefaults("ollama")}>Ollama <small>free · local</small></button>
-              <button className={provider === "openai" ? "active" : ""} onClick={() => providerDefaults("openai")}>OpenAI API <small>usage billed</small></button>
-              <button className={provider === "compatible" ? "active" : ""} onClick={() => providerDefaults("compatible")}>Compatible <small>advanced</small></button>
-            </div>
-            <div className="ai-fields"><label>Model<input value={model} onChange={(event) => setModel(event.target.value)} placeholder="gemma3" /></label><label>Endpoint<input value={baseUrl} onChange={(event) => setBaseUrl(event.target.value)} /></label>{provider !== "ollama" && credentialMode === "session" && <label>API key <span>used once, never saved</span><div className="secret-input"><KeyRound size={14} /><input type="password" value={apiKey} onChange={(event) => setApiKey(event.target.value)} placeholder="••••••••••" autoComplete="off" /></div></label>}{provider !== "ollama" && credentialMode === "server" && <p className="server-key-ready">Using the server-managed secret configured in Settings.</p>}</div>
-            {provider === "openai" && <p className="provider-caveat">A ChatGPT subscription is separate from API access. Connect with an OpenAI API key, or choose local Ollama for a no-cloud option.</p>}
+            <div className="provider-picker"><label>Connection type<select value={provider} onChange={(event) => setProviderDefaults(event.target.value as AIProvider)}>{AI_PROVIDER_CATALOG.map((item) => <option value={item.id} key={item.id}>{item.label}</option>)}</select></label><p>{getAIProvider(provider).description}</p></div>
+            <div className="ai-fields"><label>Model<input value={model} onChange={(event) => setModel(event.target.value)} placeholder="Model ID" /></label><label>Endpoint<input value={baseUrl} onChange={(event) => setBaseUrl(event.target.value)} /></label>{providerAllowsKey(provider) && credentialMode === "session" && <label>API key <span>used once, never saved</span><div className="secret-input"><KeyRound size={14} /><input type="password" value={apiKey} onChange={(event) => setApiKey(event.target.value)} placeholder="••••••••••" autoComplete="off" /></div></label>}{providerAllowsKey(provider) && credentialMode === "server" && <p className="server-key-ready">Using the server-managed secret configured in Settings.</p>}</div>
+            {provider === "chatgpt" && <p className="provider-caveat"><strong>ChatGPT Premium handoff:</strong> this uses your existing signed-in ChatGPT browser session. Plateful does not request your password, cookies, or an API key.</p>}
+            {provider === "openai" && <p className="provider-caveat">A ChatGPT subscription is separate from API access. This automatic connection requires an OpenAI API key.</p>}
             <div className="transcript-heading"><div><strong>Video transcript</strong><small>AI analyzes this text—not the video stream.</small></div><button onClick={loadTranscript} disabled={transcriptBusy}>{transcriptBusy ? <LoaderCircle className="spin" size={14} /> : <RefreshCw size={14} />}Try captions</button></div>
             <textarea className="transcript-editor" value={transcript} onChange={(event) => { setTranscript(event.target.value); setTranscriptSource("pasted"); }} placeholder="Load public captions or paste the transcript here…" dir="auto" />
-            <button className="primary-button full ai-generate-button" type="button" disabled={aiBusy} onClick={analyze}>{aiBusy ? <LoaderCircle className="spin" size={16} /> : <Sparkles size={16} />}{aiBusy ? "Building your study pack…" : video.aiArtifacts ? "Regenerate study pack" : "Generate summary, notes & mind map"}</button>
+            {provider === "chatgpt" ? <div className="manual-ai-handoff"><div className="manual-handoff-actions"><button className="secondary-button button-with-icon" type="button" onClick={copyManualRequest}><Copy size={15} />1. Copy structured request</button><a className="primary-button button-with-icon" href="https://chatgpt.com" target="_blank" rel="noreferrer"><ExternalLink size={15} />2. Open ChatGPT</a></div><label>3. Paste ChatGPT&apos;s JSON response<textarea value={manualResponse} onChange={(event) => setManualResponse(event.target.value)} placeholder={'{"summary":"…","keyPoints":[…],"commands":[],"mindMap":[…],"practice":[…],"quiz":[…]}'} dir="auto" /></label><button className="primary-button full button-with-icon" type="button" onClick={importManualResponse} disabled={!manualResponse.trim()}><Upload size={15} />Import study pack</button></div> : <button className="primary-button full ai-generate-button" type="button" disabled={aiBusy} onClick={analyze}>{aiBusy ? <LoaderCircle className="spin" size={16} /> : <Sparkles size={16} />}{aiBusy ? "Building your study pack…" : video.aiArtifacts ? "Regenerate study pack" : "Generate summary, notes & mind map"}</button>}
           </article>
 
           <article className="ai-results-card">

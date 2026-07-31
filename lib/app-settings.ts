@@ -1,5 +1,5 @@
-export type AIProvider = "ollama" | "openai" | "compatible";
-export type CredentialMode = "session" | "server";
+export type AIProvider = "chatgpt" | "openai" | "anthropic" | "gemini" | "openrouter" | "ollama" | "lmstudio" | "compatible";
+export type CredentialMode = "none" | "session" | "server";
 
 export type AIConnection = {
   id: string;

@@ -46,17 +46,18 @@ The AI studio turns a transcript into four structured artifacts:
 
 ### Provider model
 
-- **OpenAI API:** the user supplies an API key for the request or configures a
-  server-side key. A ChatGPT subscription cannot be used as third-party app
-  authentication because ChatGPT and API access are separate products.
-- **Ollama:** the recommended free/local option. The user supplies the local
-  endpoint and installed model. No cloud key is required for the local API.
-- **OpenAI-compatible endpoint:** a portable adapter for another self-hosted or
-  hosted provider that supports the common chat API shape.
+- **Account-assisted:** ChatGPT Free/Plus/Pro uses an explicit copy, open, and
+  import handoff. The user's signed-in browser session stays with ChatGPT;
+  Plateful receives only the result the user pastes back.
+- **Cloud APIs:** automatic adapters for OpenAI, Anthropic, Google Gemini, and
+  OpenRouter. Each uses its own documented authentication and response shape.
+- **Local:** Ollama and LM Studio keep inference on a user-controlled machine.
+- **Custom:** an OpenAI-compatible endpoint covers other hosted or self-hosted
+  services, with an optional key.
 
 Keys are never written to the project JSON or D1. A browser-entered key is sent
 only to the self-hosted server for the current request. Provider name, model,
-and base URL are device preferences; credentials are not.
+and base URL sync as account preferences; credentials do not.
 
 ### Transcript acquisition
 

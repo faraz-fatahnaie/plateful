@@ -81,18 +81,24 @@ For self-hosted Google sign-in, follow [docs/GOOGLE_SIGN_IN.md](docs/GOOGLE_SIGN
 
 ## AI and email configuration
 
-- Local Ollama needs no cloud key; enter the local endpoint and installed model
-  in the video workspace.
-- OpenAI uses an API key held in browser memory, or the self-hosted server can
-  provide `OPENAI_API_KEY`. ChatGPT subscriptions and API
-  billing are separate, so the app does not offer a misleading “Sign in with
-  ChatGPT” control.
+- A ChatGPT Free/Plus/Pro account can be defined as an account-assisted
+  connection. Plateful copies a structured request, opens the user's signed-in
+  ChatGPT session, and validates the JSON pasted back. It never requests a
+  password or cookie. This path is manual because ChatGPT subscriptions and API
+  billing are separate.
+- Automatic connections support OpenAI, Anthropic, Google Gemini, OpenRouter,
+  Ollama, LM Studio, and custom OpenAI-compatible endpoints.
+- Browser-entered API keys remain in memory. Self-hosted operators can instead
+  configure `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`,
+  `OPENROUTER_API_KEY`, or `COMPATIBLE_AI_API_KEY`.
 - AI keys are never written to D1 or project JSON.
-- Compatible providers can use `COMPATIBLE_AI_API_KEY` as a server secret.
 - Email reminders can be delivered to Gmail or any address after the self-hosted
   server configures `RESEND_API_KEY` and `NOTIFICATION_FROM_EMAIL`.
 - A future scheduler can call the existing email endpoint at the preferred lead
   time; the app already stores the user's opt-in reminder policy.
+
+See [docs/AI_CONNECTIONS.md](docs/AI_CONNECTIONS.md) for the connection matrix
+and setup workflow.
 
 ## Install the skill
 

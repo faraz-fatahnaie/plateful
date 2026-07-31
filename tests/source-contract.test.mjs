@@ -181,3 +181,31 @@ test("ships verified Google identity and cross-device account sync", async () =>
   assert.match(security, /Never trust a client-supplied/);
   assert.match(packageJson, /"jose"/);
 });
+
+test("supports broad external AI connections and a safe ChatGPT account handoff", async () => {
+  const [catalog, settings, video, analyze, aiDocs, env, security] = await Promise.all([
+    source("lib/ai-providers.ts"),
+    source("app/components/SettingsView.tsx"),
+    source("app/components/VideoWorkspace.tsx"),
+    source("app/api/ai/analyze/route.ts"),
+    source("docs/AI_CONNECTIONS.md"),
+    source(".env.example"),
+    source("SECURITY.md"),
+  ]);
+
+  for (const provider of ["chatgpt", "openai", "anthropic", "gemini", "openrouter", "ollama", "lmstudio", "compatible"]) {
+    assert.match(catalog, new RegExp(`id: "${provider}"`));
+  }
+  assert.match(settings, /Account-assisted/);
+  assert.match(settings, /never asks for your ChatGPT password or cookies/);
+  assert.match(video, /Copy structured request/);
+  assert.match(video, /Import study pack/);
+  assert.match(analyze, /api\.anthropic\.com/);
+  assert.match(analyze, /generativelanguage\.googleapis\.com/);
+  assert.match(analyze, /openrouter\.ai/);
+  assert.match(aiDocs, /ChatGPT subscription does not include OpenAI API usage/);
+  assert.match(env, /ANTHROPIC_API_KEY/);
+  assert.match(env, /GEMINI_API_KEY/);
+  assert.match(env, /OPENROUTER_API_KEY/);
+  assert.match(security, /never asks for or stores a ChatGPT/);
+});

@@ -24,13 +24,19 @@ must show exact matches and receive approval before deletion.
 
 AI credentials entered in the web app are request-scoped and must not be
 written to logs, D1, exported JSON, browser storage, or notifications. Prefer a
-local Ollama endpoint when transcript content must remain on the learner's
-machine.
+local Ollama or LM Studio endpoint when transcript content must remain on the
+learner's machine.
 
 Saved AI connection profiles contain only the provider, model, endpoint, and
 credential mode. Session keys live in browser memory only. Self-hosted operators
-may instead configure `OPENAI_API_KEY` or `COMPATIBLE_AI_API_KEY` as server-side
-secrets.
+may instead configure `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`,
+`OPENROUTER_API_KEY`, or `COMPATIBLE_AI_API_KEY` as server-side secrets.
+
+The ChatGPT account-assisted workflow never asks for or stores a ChatGPT
+password, session cookie, access token, or browser profile. It only copies a
+prompt, opens `chatgpt.com`, and imports user-pasted JSON. Do not add browser
+automation that extracts ChatGPT credentials or impersonates its private web
+client.
 
 Email delivery uses a server-side HTTP mail provider. Never request or store a
 Gmail password. Keep `RESEND_API_KEY` and `NOTIFICATION_FROM_EMAIL` in the

@@ -1,15 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Bot, CalendarX, CheckCircle2, KeyRound, LoaderCircle, Plus, Save, Server, ShieldCheck, Trash2, User } from "lucide-react";
+import { Bot, CalendarX, CheckCircle2, ExternalLink, KeyRound, LoaderCircle, Plus, Save, Server, ShieldCheck, Trash2, User } from "lucide-react";
 import type { AIConnection, AIProvider, AppSettings } from "../../lib/app-settings";
+import { AI_PROVIDER_CATALOG, AI_PROVIDER_GROUP_LABELS, getAIProvider, providerAllowsKey, providerDefaults } from "../../lib/ai-providers";
 import type { PlaylistStudyProject } from "../../lib/playlist-study";
-
-function providerDefaults(provider: AIProvider): Pick<AIConnection, "provider" | "model" | "baseUrl" | "credentialMode"> {
-  if (provider === "ollama") return { provider, model: "gemma3", baseUrl: "http://localhost:11434", credentialMode: "session" };
-  if (provider === "openai") return { provider, model: "gpt-5.6-luna", baseUrl: "https://api.openai.com/v1", credentialMode: "session" };
-  return { provider, model: "", baseUrl: "https://api.example.com/v1", credentialMode: "session" };
-}
 
 function todayInTimezone(timezone: string) {
   const parts = new Intl.DateTimeFormat("en", { timeZone: timezone, year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date());
@@ -60,10 +55,10 @@ export default function SettingsView({
 
   function addConnection() {
     const id = `ai-${Date.now()}`;
-    const defaults = providerDefaults("openai");
+    const defaults = providerDefaults("chatgpt");
     setDraft((current) => ({
       ...current,
-      aiConnections: [...current.aiConnections, { id, name: "OpenAI", enabled: true, updatedAt: new Date().toISOString(), ...defaults }],
+      aiConnections: [...current.aiConnections, { id, name: "My ChatGPT", enabled: true, updatedAt: new Date().toISOString(), ...defaults }],
       activeAIConnectionId: current.activeAIConnectionId || id,
     }));
   }
@@ -119,22 +114,26 @@ export default function SettingsView({
         </article>
 
         <article className="settings-card settings-span-two">
-          <div className="settings-section-head"><span><Bot size={19} /></span><div><h3>External AI connections</h3><p>Choose a local model, OpenAI API, or an OpenAI-compatible provider.</p></div><button className="secondary-button button-with-icon" type="button" onClick={addConnection}><Plus size={14} />Add connection</button></div>
+          <div className="settings-section-head"><span><Bot size={19} /></span><div><h3>External AI connections</h3><p>Use a signed-in AI account, a cloud API, a private local model, or a custom endpoint.</p></div><button className="secondary-button button-with-icon" type="button" onClick={addConnection}><Plus size={14} />Add connection</button></div>
+          <div className="ai-connection-modes"><span><strong>Account-assisted</strong><small>ChatGPT subscription · copy/open/import</small></span><span><strong>Automatic APIs</strong><small>OpenAI · Anthropic · Gemini · OpenRouter</small></span><span><strong>Local & custom</strong><small>Ollama · LM Studio · compatible APIs</small></span></div>
           <div className="connection-list">
             {draft.aiConnections.map((connection) => {
               const result = testResults[connection.id];
+              const definition = getAIProvider(connection.provider);
               return <div className={`connection-card ${draft.activeAIConnectionId === connection.id ? "active" : ""}`} key={connection.id}>
-                <div className="connection-title"><label className="radio-title"><input type="radio" name="active-ai" checked={draft.activeAIConnectionId === connection.id} onChange={() => setDraft({ ...draft, activeAIConnectionId: connection.id })} /><span><strong>{connection.name || "Unnamed connection"}</strong><small>{draft.activeAIConnectionId === connection.id ? "Default for video study" : "Set as default"}</small></span></label><span className={`provider-pill ${connection.provider}`}>{connection.provider}</span></div>
+                <div className="connection-title"><label className="radio-title"><input type="radio" name="active-ai" checked={draft.activeAIConnectionId === connection.id} onChange={() => setDraft({ ...draft, activeAIConnectionId: connection.id })} /><span><strong>{connection.name || "Unnamed connection"}</strong><small>{draft.activeAIConnectionId === connection.id ? "Default for video study" : "Set as default"}</small></span></label><span className={`provider-pill ${connection.provider}`}>{definition.mode === "manual" ? "manual handoff" : definition.shortLabel}</span></div>
                 <div className="connection-fields">
                   <label>Name<input value={connection.name} onChange={(event) => updateConnection(connection.id, { name: event.target.value })} /></label>
-                  <label>Provider<select value={connection.provider} onChange={(event) => updateConnection(connection.id, providerDefaults(event.target.value as AIProvider))}><option value="ollama">Ollama (local)</option><option value="openai">OpenAI API</option><option value="compatible">OpenAI-compatible</option></select></label>
+                  <label>Connection type<select value={connection.provider} onChange={(event) => { const provider = event.target.value as AIProvider; const next = getAIProvider(provider); updateConnection(connection.id, { ...providerDefaults(provider), name: next.defaultName }); }}>{(["account", "cloud", "local", "custom"] as const).map((group) => <optgroup label={AI_PROVIDER_GROUP_LABELS[group]} key={group}>{AI_PROVIDER_CATALOG.filter((item) => item.group === group).map((item) => <option value={item.id} key={item.id}>{item.label}</option>)}</optgroup>)}</select></label>
                   <label>Model<input value={connection.model} onChange={(event) => updateConnection(connection.id, { model: event.target.value })} placeholder="Model ID" /></label>
                   <label>Endpoint<input value={connection.baseUrl} onChange={(event) => updateConnection(connection.id, { baseUrl: event.target.value })} /></label>
-                  {connection.provider !== "ollama" && <label>Credential source<select value={connection.credentialMode} onChange={(event) => updateConnection(connection.id, { credentialMode: event.target.value as AIConnection["credentialMode"] })}><option value="session">Enter key for this session</option><option value="server">Use server secret</option></select></label>}
-                  {connection.provider !== "ollama" && connection.credentialMode === "session" && <label>API key<div className="secret-input"><KeyRound size={14} /><input type="password" value={sessionKeys[connection.id] || ""} onChange={(event) => onSessionKey(connection.id, event.target.value)} placeholder="Used in memory only" autoComplete="off" /></div></label>}
-                  {connection.provider !== "ollama" && connection.credentialMode === "server" && <div className="server-secret"><Server size={15} /><span><strong>{connection.provider === "openai" ? "OPENAI_API_KEY" : "COMPATIBLE_AI_API_KEY"}</strong><small>Configure this secret on your own server.</small></span></div>}
+                  {providerAllowsKey(connection.provider) && <label>Credential source<select value={connection.credentialMode} onChange={(event) => updateConnection(connection.id, { credentialMode: event.target.value as AIConnection["credentialMode"] })}>{definition.auth === "optional-key" && <option value="none">No key</option>}<option value="session">Enter key for this session</option>{definition.serverSecret && <option value="server">Use server secret</option>}</select></label>}
+                  {providerAllowsKey(connection.provider) && connection.credentialMode === "session" && <label>API key<div className="secret-input"><KeyRound size={14} /><input type="password" value={sessionKeys[connection.id] || ""} onChange={(event) => onSessionKey(connection.id, event.target.value)} placeholder="Used in memory only" autoComplete="off" /></div></label>}
+                  {providerAllowsKey(connection.provider) && connection.credentialMode === "server" && <div className="server-secret"><Server size={15} /><span><strong>{definition.serverSecret}</strong><small>Configure this secret on your own server.</small></span></div>}
                 </div>
-                {connection.provider === "openai" && <p className="provider-caveat">ChatGPT subscriptions and OpenAI API billing are separate. This connection uses API access.</p>}
+                <p className="provider-description">{definition.description} {definition.docsUrl && <a href={definition.docsUrl} target="_blank" rel="noreferrer">Provider guide <ExternalLink size={12} /></a>}</p>
+                {connection.provider === "chatgpt" && <p className="provider-caveat"><strong>Your Premium account works here through a manual handoff.</strong> Plateful prepares the request, opens ChatGPT, then imports the JSON result. It never asks for your ChatGPT password or cookies.</p>}
+                {connection.provider === "openai" && <p className="provider-caveat">ChatGPT subscriptions and OpenAI API billing are separate. This automatic connection uses an OpenAI API key.</p>}
                 <div className="connection-actions"><span className={result ? (result.ok ? "connection-result ok" : "connection-result error") : "connection-result"}>{result?.ok && <CheckCircle2 size={13} />}{result?.text || "Not tested yet"}</span><button className="text-button danger-text" type="button" onClick={() => removeConnection(connection.id)}><Trash2 size={13} />Remove</button><button className="secondary-button" type="button" onClick={() => testConnection(connection)} disabled={testing === connection.id}>{testing === connection.id ? <><LoaderCircle className="spin" size={14} />Testing…</> : "Test connection"}</button></div>
               </div>;
             })}
