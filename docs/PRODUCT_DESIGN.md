@@ -169,6 +169,19 @@ is detected at the text boundary, marked RTL, and rendered with bundled
 Vazirmatn. Editors use automatic direction so mixed Persian/English notes and
 transcripts remain readable.
 
+## Account and cross-device continuity
+
+The profile control opens an account center showing verified identity, cloud
+sync status, playlist/video/note totals, last save time, refresh, settings, and
+sign-out. Loading and unauthenticated states use a focused account gate instead
+of briefly exposing sample data.
+
+Google sign-in belongs to a trusted deployment identity gateway. Plateful
+verifies the signed identity assertion server-side, uses the normalized email as
+the D1 ownership boundary, and never stores Google credentials. Playlist data,
+settings, notes, progress, and generated study material follow the account;
+session API keys and temporary UI filters remain device-local by design.
+
 ## Implementation sequence
 
 1. Extend the versioned project contract with completion timestamps, AI

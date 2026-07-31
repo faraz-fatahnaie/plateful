@@ -37,15 +37,17 @@ test("keeps the app and skill on one versioned data contract", async () => {
 });
 
 test("separates public source from private user and Calendar data", async () => {
-  const [readme, security, route] = await Promise.all([
+  const [readme, security, route, auth] = await Promise.all([
     source("README.md"),
     source("SECURITY.md"),
     source("app/api/projects/route.ts"),
+    source("lib/server-auth.ts"),
   ]);
 
   assert.match(readme, /source code and bundled Codex skill are public/i);
   assert.match(security, /Do not commit real playlist exports/i);
-  assert.match(route, /oai-authenticated-user-email/);
+  assert.match(auth, /oai-authenticated-user-email/);
+  assert.match(route, /getAuthenticatedUser/);
   assert.match(route, /storageId = `\$\{email\}::\$\{project\.id\}`/);
 });
 
@@ -112,7 +114,7 @@ test("ships durable settings, external AI connections, and safe Calendar removal
   assert.match(app, /Preserve past events, completed events, and all unrelated events/);
   assert.match(settingsView, /Remove playlist from Calendar/);
   assert.match(settingsView, /API keys are never written to app settings/);
-  assert.match(settingsRoute, /oai-authenticated-user-email/);
+  assert.match(settingsRoute, /getAuthenticatedUser/);
   assert.match(settingsRoute, /withoutSecrets/);
   assert.match(aiTest, /TestRequest/);
   assert.match(aiAnalyze, /OPENAI_API_KEY/);
@@ -145,4 +147,37 @@ test("ships layered discovery controls and Persian typography", async () => {
   assert.match(layout, /@fontsource-variable\/vazirmatn/);
   assert.match(packageJson, /@fontsource-variable\/vazirmatn/);
   assert.match(design, /Day\/Week\/Month/);
+});
+
+test("ships verified Google identity and cross-device account sync", async () => {
+  const [app, accountMenu, authGate, accountRoute, auth, projectsRoute, settingsRoute, schema, migration, docs, security, packageJson] = await Promise.all([
+    source("app/StudyApp.tsx"),
+    source("app/components/AccountMenu.tsx"),
+    source("app/components/AuthGate.tsx"),
+    source("app/api/account/route.ts"),
+    source("lib/server-auth.ts"),
+    source("app/api/projects/route.ts"),
+    source("app/api/settings/route.ts"),
+    source("db/schema.ts"),
+    source("drizzle/0002_lush_shiva.sql"),
+    source("docs/GOOGLE_SIGN_IN.md"),
+    source("SECURITY.md"),
+    source("package.json"),
+  ]);
+
+  assert.match(app, /Cloud synced/);
+  assert.match(app, /AccountMenu/);
+  assert.match(accountMenu, /Synced across devices/);
+  assert.match(authGate, /Continue with Google/);
+  assert.match(accountRoute, /cache-control/);
+  assert.match(auth, /jwtVerify/);
+  assert.match(auth, /CF_ACCESS_AUD/);
+  assert.match(auth, /localhost/);
+  assert.match(projectsRoute, /user\.email/);
+  assert.match(settingsRoute, /userAccounts/);
+  assert.match(schema, /userAccounts/);
+  assert.match(migration, /CREATE TABLE `user_accounts`/);
+  assert.match(docs, /same verified email/);
+  assert.match(security, /Never trust a client-supplied/);
+  assert.match(packageJson, /"jose"/);
 });

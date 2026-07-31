@@ -56,6 +56,12 @@ settings payload contains study defaults and AI connection metadata, but never
 API keys. Session keys stay in memory; server-managed keys stay in deployment
 secrets.
 
+Account identity metadata uses `user_accounts`, keyed by normalized verified
+email. Playlist rows remain namespaced as `email::projectId`, and settings use
+the same email as their primary key. Consequently, the same authenticated
+Google account receives the same server-authoritative workspace on every
+device. Google passwords and OAuth tokens are outside this data contract.
+
 ## Minimal planning intake
 
 ```json

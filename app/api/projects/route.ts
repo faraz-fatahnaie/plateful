@@ -2,10 +2,7 @@ import { desc, eq } from "drizzle-orm";
 import { getDb } from "../../../db";
 import { playlistProjects } from "../../../db/schema";
 import type { PlaylistStudyProject } from "../../../lib/playlist-study";
-
-function ownerEmail(request: Request): string | null {
-  return request.headers.get("oai-authenticated-user-email");
-}
+import { getAuthenticatedUser } from "../../../lib/server-auth";
 
 function isProject(value: unknown): value is PlaylistStudyProject {
   if (!value || typeof value !== "object") return false;
@@ -27,10 +24,10 @@ function routeError(error: unknown) {
 }
 
 export async function GET(request: Request) {
-  const email = ownerEmail(request);
-  if (!email) return Response.json({ error: "Sign in is required" }, { status: 401 });
-
   try {
+    const user = await getAuthenticatedUser(request);
+    if (!user) return Response.json({ error: "Sign in is required" }, { status: 401 });
+    const email = user.email;
     const db = await getDb();
     const rows = await db
       .select({ payload: playlistProjects.payload })
@@ -47,10 +44,10 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const email = ownerEmail(request);
-  if (!email) return Response.json({ error: "Sign in is required" }, { status: 401 });
-
   try {
+    const user = await getAuthenticatedUser(request);
+    if (!user) return Response.json({ error: "Sign in is required" }, { status: 401 });
+    const email = user.email;
     const project = (await request.json()) as unknown;
     if (!isProject(project)) {
       return Response.json({ error: "Invalid playlist-study project" }, { status: 400 });

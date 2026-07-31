@@ -16,3 +16,11 @@ export const userSettings = sqliteTable("user_settings", {
   payload: text("payload").notNull(),
   updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 });
+
+export const userAccounts = sqliteTable("user_accounts", {
+  email: text("email").primaryKey(),
+  displayName: text("display_name").notNull(),
+  provider: text("provider").notNull(),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  lastSeenAt: text("last_seen_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+});

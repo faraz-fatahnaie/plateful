@@ -21,12 +21,15 @@ import {
 } from "lucide-react";
 import GuideView from "./components/GuideView";
 import GlobalSearch from "./components/GlobalSearch";
+import AccountMenu from "./components/AccountMenu";
+import AuthGate from "./components/AuthGate";
 import NotificationCenter from "./components/NotificationCenter";
 import ReportsView from "./components/ReportsView";
 import RoadmapView from "./components/RoadmapView";
 import SettingsView from "./components/SettingsView";
 import VideoWorkspace from "./components/VideoWorkspace";
 import { cloneDefaultSettings, type AppSettings } from "../lib/app-settings";
+import type { AccountSnapshot } from "../lib/account";
 import { languageProps, matchesSearch, videoMatchesSearch } from "../lib/discovery";
 import {
   buildSkillRequest,
@@ -40,6 +43,7 @@ import {
 } from "../lib/playlist-study";
 
 type SaveState = "saved" | "saving" | "preview";
+type AccountMode = "loading" | "authenticated" | "anonymous" | "preview" | "error";
 type AppTab = "today" | "roadmap" | "playlists" | "notes" | "reports" | "guide" | "settings" | "video";
 
 const tabCopy: Record<AppTab, { eyebrow: string; title: string }> = {
@@ -86,6 +90,9 @@ export default function StudyApp() {
   const [focusedSessionId, setFocusedSessionId] = useState<string | null>(null);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showGlobalSearch, setShowGlobalSearch] = useState(false);
+  const [showAccountMenu, setShowAccountMenu] = useState(false);
+  const [accountMode, setAccountMode] = useState<AccountMode>("loading");
+  const [account, setAccount] = useState<AccountSnapshot | null>(null);
   const [playlistQuery, setPlaylistQuery] = useState("");
   const [playlistStatus, setPlaylistStatus] = useState<"all" | PlaylistStudyProject["status"]>("all");
   const [playlistSort, setPlaylistSort] = useState<"recent" | "progress" | "title">("recent");
@@ -112,6 +119,9 @@ export default function StudyApp() {
     ? project.videos.find((video) => video.id === selectedVideoId) ?? null
     : null;
   const unreadNotifications = (project.notifications || []).filter((item) => !item.read).length;
+  const accountVideoCount = projects.reduce((sum, item) => sum + item.videos.length, 0);
+  const accountNoteCount = projects.reduce((sum, item) => sum + item.videos.filter((video) => video.note.trim()).length, 0);
+  const accountLastSyncedAt = [...projects.map((item) => item.updatedAt), appSettings.updatedAt, account?.sync?.lastSyncedAt || ""].filter(Boolean).sort().at(-1) || null;
 
   const filteredProjects = useMemo(() => projects.filter((item) => (playlistStatus === "all" || item.status === playlistStatus) && matchesSearch(playlistQuery, item.title, item.goal, item.preferences)).sort((left, right) => {
     if (playlistSort === "title") return left.title.localeCompare(right.title);
@@ -146,16 +156,46 @@ export default function StudyApp() {
 
   useEffect(() => {
     let cancelled = false;
+    fetch("/api/account", { cache: "no-store" })
+      .then(async (response) => {
+        const payload = (await response.json()) as AccountSnapshot;
+        if (response.status === 401) return { mode: "anonymous" as const, payload };
+        if (!response.ok || !payload.authenticated) throw new Error("Account unavailable");
+        return { mode: "authenticated" as const, payload };
+      })
+      .then(({ mode, payload }) => {
+        if (cancelled) return;
+        setAccount(payload);
+        setAccountMode(mode === "anonymous" && ["localhost", "127.0.0.1"].includes(window.location.hostname) ? "preview" : mode);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setAccountMode(["localhost", "127.0.0.1"].includes(window.location.hostname) ? "preview" : "error");
+      });
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
     fetch("/api/projects")
       .then(async (response) => {
         if (!response.ok) throw new Error("Persistence unavailable");
         return (await response.json()) as { projects?: PlaylistStudyProject[] };
       })
       .then((payload) => {
-        if (cancelled || !payload.projects?.length) return;
-        setProjects(payload.projects);
-        setSelectedId(payload.projects[0].id);
-        setSaveState("saved");
+        if (cancelled || !payload.projects) return;
+        if (payload.projects.length) {
+          setProjects(payload.projects);
+          setSelectedId(payload.projects[0].id);
+          setSaveState("saved");
+          return;
+        }
+        const starter = cloneSample();
+        starter.notificationPreferences = { ...(starter.notificationPreferences || { inApp: true, email: false, emailAddress: "", leadMinutes: 30, dailyDigest: true }), emailAddress: "", email: false };
+        starter.updatedAt = new Date().toISOString();
+        setProjects([starter]);
+        setSelectedId(starter.id);
+        fetch("/api/projects", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(starter) }).then((saveResponse) => setSaveState(saveResponse.ok ? "saved" : "preview")).catch(() => setSaveState("preview"));
       })
       .catch(() => setSaveState("preview"));
     return () => {
@@ -222,6 +262,7 @@ export default function StudyApp() {
       if (!response.ok) throw new Error("Settings save failed");
       const payload = (await response.json()) as { settings?: AppSettings };
       if (payload.settings) setAppSettings(payload.settings);
+      setAccount((current) => current?.user ? { ...current, user: { ...current.user, name: next.displayName || current.user.name }, sync: current.sync ? { ...current.sync, lastSyncedAt: next.updatedAt } : current.sync } : current);
       setSaveState("saved");
       setNotice("Settings saved. Secret keys were not persisted.");
     } catch {
@@ -457,6 +498,10 @@ export default function StudyApp() {
     setNotice("Playlist intake saved. Export it or ask the skill to complete its inventory and plan.");
   }
 
+  if (accountMode === "loading" || accountMode === "anonymous" || accountMode === "error") {
+    return <AuthGate mode={accountMode} account={account} />;
+  }
+
   return (
     <main className="app-shell">
       <aside className="sidebar">
@@ -475,7 +520,8 @@ export default function StudyApp() {
         </nav>
         <div className="sidebar-bottom">
           <div className="privacy-note"><ShieldCheck size={15} /><div><strong>Private workspace</strong><small>Your study data stays in your account.</small></div></div>
-          <button className="profile" type="button" onClick={() => setActiveTab("settings")}><span className="avatar">{(appSettings.displayName || "U").slice(0, 1).toUpperCase()}</span><span><strong>{appSettings.displayName || "User"}</strong><small>{appSettings.timezone}</small></span><ChevronDown size={15} /></button>
+          {showAccountMenu && <AccountMenu account={accountMode === "authenticated" ? account : null} playlistCount={projects.length} videoCount={accountVideoCount} noteCount={accountNoteCount} lastSyncedAt={accountLastSyncedAt} onClose={() => setShowAccountMenu(false)} onSettings={() => { setShowAccountMenu(false); setActiveTab("settings"); }} onRefresh={() => window.location.reload()} />}
+          <button className="profile" type="button" onClick={() => setShowAccountMenu((current) => !current)} aria-expanded={showAccountMenu}><span className="avatar">{(account?.user?.name || appSettings.displayName || "U").slice(0, 1).toUpperCase()}</span><span><strong>{account?.user?.name || appSettings.displayName || "User"}</strong><small>{account?.user?.email || (accountMode === "preview" ? "Local preview" : appSettings.timezone)}</small></span><ChevronDown size={15} /></button>
         </div>
       </aside>
 
@@ -487,7 +533,7 @@ export default function StudyApp() {
           </div>
           <div className="top-actions">
             <button className="global-search-trigger" type="button" onClick={() => setShowGlobalSearch(true)} aria-label="Search all learning content"><Search size={15} /><span>Search</span><kbd>Ctrl K</kbd></button>
-            <span className={`save-state ${saveState}`}>{saveState === "saved" ? "Saved" : saveState === "saving" ? "Saving…" : "Preview data"}</span>
+            <span className={`save-state ${saveState}`}>{saveState === "saved" ? (accountMode === "authenticated" ? "Cloud synced" : "Saved") : saveState === "saving" ? "Syncing…" : "Preview data"}</span>
             <button className="icon-button notification-trigger" aria-label={`Notifications${unreadNotifications ? `, ${unreadNotifications} unread` : ""}`} type="button" onClick={() => setShowNotifications(true)}><Bell size={17} />{unreadNotifications > 0 && <span>{unreadNotifications}</span>}</button>
             <button className="primary-button button-with-icon" type="button" onClick={() => setShowAdd(true)}><Plus size={16} />Add playlist</button>
           </div>

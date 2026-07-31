@@ -26,6 +26,7 @@ data, notes, account, and Calendar credentials remain private.
 - multi-playlist dashboard;
 - global search plus scoped playlist, note, and roadmap filtering/sorting;
 - automatic RTL direction and bundled Vazirmatn typography for Persian content;
+- verified Google/Gmail identity with private cross-device account sync;
 - guided playlist intake;
 - daily watch queue and links;
 - privacy-enhanced embedded YouTube player and full video information workspace;
@@ -40,6 +41,7 @@ data, notes, account, and Calendar credentials remain private.
 - per-video notes and watched state;
 - study policy and upcoming-session views;
 - durable, user-owned D1 storage;
+- an account center with sync status, cloud refresh, settings, and sign-out;
 - portable JSON export;
 - safe Calendar handoff that never stores Google OAuth secrets;
 - installable `plan-youtube-playlist-study` Codex skill.
@@ -74,6 +76,8 @@ data, notes, account, and Calendar credentials remain private.
   Calendar integration, never in this repository or app database.
 
 See [SECURITY.md](SECURITY.md) before deploying or contributing.
+
+For self-hosted Google sign-in, follow [docs/GOOGLE_SIGN_IN.md](docs/GOOGLE_SIGN_IN.md).
 
 ## AI and email configuration
 

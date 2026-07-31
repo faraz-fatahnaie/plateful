@@ -8,6 +8,12 @@ The production site should remain owner-only unless its operator intentionally
 changes the Sites access policy. Every API write is scoped to the authenticated
 user header and stored under a per-user project key.
 
+For self-hosted Google sign-in, Cloudflare Access must protect the origin.
+Plateful verifies `Cf-Access-Jwt-Assertion` against the configured Access JWKS,
+issuer, and audience before using its email claim. Never trust a client-supplied
+email header by itself. Set `AUTH_MODE=cloudflare-access` so alternate identity
+headers cannot bypass Access. `DEV_AUTH_EMAIL` is accepted only on localhost.
+
 Calendar changes must be previewed before they are applied. The app generates a
 reconciliation request; the connected Codex Google Calendar integration owns
 the final private mutation.
