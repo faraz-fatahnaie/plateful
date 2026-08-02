@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { ArrowDown, ArrowUp, Bot, Check, Copy, ExternalLink, Plus, Save, Sparkles, Tags, X } from "lucide-react";
 import type { AIConnection } from "../../lib/app-settings";
-import { getAIProvider } from "../../lib/ai-providers";
+import { getAIProvider, providerUsesManualHandoff } from "../../lib/ai-providers";
 import type { PlaylistStudyProject, StudyVideo, TopicMethod } from "../../lib/playlist-study";
 import { applyClassifications, buildTopicClassificationPrompt, parseTopicClassifications } from "../../lib/topic-organization";
 import { languageProps, matchesSearch } from "../../lib/discovery";
@@ -56,7 +56,7 @@ export default function TopicOrganizer({ project, aiConnection, aiApiKey, onSave
 
   async function classifyWithAI() {
     if (!aiConnection) { setMessage("Choose an external AI connection in Settings first."); return; }
-    if (aiConnection.provider === "chatgpt") { setMethod("ai"); setMessage("Use the ChatGPT handoff below: copy the request, then import its JSON result."); return; }
+    if (providerUsesManualHandoff(aiConnection.provider)) { setMethod("ai"); setMessage(`Use the ${getAIProvider(aiConnection.provider).shortLabel} handoff below: copy the request, then import its JSON result.`); return; }
     setBusy(true);
     setMessage("");
     try {
@@ -70,19 +70,19 @@ export default function TopicOrganizer({ project, aiConnection, aiApiKey, onSave
     finally { setBusy(false); }
   }
 
-  async function copyChatGPTRequest() {
+  async function copyManualAIRequest() {
     try {
       await navigator.clipboard.writeText(buildTopicClassificationPrompt(project.title, videos));
-      setMessage("Topic-classification request copied. Paste it into ChatGPT, then import the JSON response.");
+      setMessage(`Topic-classification request copied. Paste it into ${aiConnection ? getAIProvider(aiConnection.provider).shortLabel : "your AI"}, then import the JSON response.`);
     } catch { setMessage("Clipboard access was blocked. Copy the classification request manually."); }
   }
 
-  function importChatGPTTopics() {
+  function importManualAITopics() {
     try {
       const topics = parseTopicClassifications(manualResponse, videos.map((video) => video.id));
       const next = applyClassifications(videos, topics, "ai");
       setVideos(next); setTopicOrder(topics.map((topic) => topic.name)); setMethod("ai"); setLastGeneratedBy("ai"); setUserEdited(false);
-      setMessage(`Imported ${topics.length} ChatGPT topics. Review and edit them before saving.`);
+      setMessage(`Imported ${topics.length} ${aiConnection ? getAIProvider(aiConnection.provider).shortLabel : "AI"} topics. Review and edit them before saving.`);
     } catch (error) { setMessage(error instanceof Error ? error.message : "Could not import topic JSON"); }
   }
 
@@ -134,8 +134,8 @@ export default function TopicOrganizer({ project, aiConnection, aiApiKey, onSave
       <button className={method === "manual" ? "active" : ""} onClick={() => chooseMethod("manual")}><span><Sparkles size={18} /></span><strong>My organization</strong><small>Full manual control</small></button>
     </div>
     {method === "publisher" && <div className="topic-method-action"><div><strong>Respect the creator&apos;s intent first</strong><p>Uses playlist sections, chapters, or publisher labels captured during inventory. Missing labels keep their current topic.</p></div><button className="secondary-button" type="button" onClick={usePublisherStructure}>Apply publisher structure</button></div>}
-    {method === "ai" && aiConnection?.provider !== "chatgpt" && <div className="topic-method-action"><div><strong>Classify the verified inventory</strong><p>AI receives episode IDs, titles, and available publisher labels—not your personal notes.</p></div><button className="primary-button button-with-icon" type="button" onClick={classifyWithAI} disabled={busy}><Bot size={14} />{busy ? "Classifying…" : "Classify with AI"}</button></div>}
-    {method === "ai" && aiConnection?.provider === "chatgpt" && <div className="topic-manual-ai"><div className="manual-handoff-actions"><button className="secondary-button button-with-icon" type="button" onClick={copyChatGPTRequest}><Copy size={14} />1. Copy request</button><a className="primary-button button-with-icon" href="https://chatgpt.com" target="_blank" rel="noreferrer"><ExternalLink size={14} />2. Open ChatGPT</a></div><label>3. Paste topic JSON<textarea value={manualResponse} onChange={(event) => setManualResponse(event.target.value)} placeholder={'{"topics":[{"name":"Networking","videoIds":["ep-001"]}]}'} /></label><button className="secondary-button" type="button" onClick={importChatGPTTopics} disabled={!manualResponse.trim()}>Import classification</button></div>}
+    {method === "ai" && aiConnection && !providerUsesManualHandoff(aiConnection.provider) && <div className="topic-method-action"><div><strong>Classify the verified inventory</strong><p>AI receives episode IDs, titles, and available publisher labels—not your personal notes.</p></div><button className="primary-button button-with-icon" type="button" onClick={classifyWithAI} disabled={busy}><Bot size={14} />{busy ? "Classifying…" : "Classify with AI"}</button></div>}
+    {method === "ai" && aiConnection && providerUsesManualHandoff(aiConnection.provider) && <div className="topic-manual-ai"><div className="manual-handoff-actions"><button className="secondary-button button-with-icon" type="button" onClick={copyManualAIRequest}><Copy size={14} />1. Copy request</button><a className="primary-button button-with-icon" href={getAIProvider(aiConnection.provider).defaultBaseUrl}><ExternalLink size={14} />2. Continue to {getAIProvider(aiConnection.provider).shortLabel}</a></div><label>3. Paste topic JSON<textarea value={manualResponse} onChange={(event) => setManualResponse(event.target.value)} placeholder={'{"topics":[{"name":"Networking","videoIds":["ep-001"]}]}'} /></label><button className="secondary-button" type="button" onClick={importManualAITopics} disabled={!manualResponse.trim()}>Import classification</button></div>}
     {message && <p className="topic-organizer-message">{message}</p>}
     <div className="topic-editor-head"><div><strong>Topics & priority</strong><small>Priority topics are scheduled first, in this order.</small></div><button className="secondary-button button-with-icon" type="button" onClick={addTopic}><Plus size={13} />Add topic</button></div>
     <div className="topic-edit-list">{topicOrder.map((topic, index) => <div className="topic-edit-row" key={`topic-${index}`}><span>{index + 1}</span><input value={topic} onChange={(event) => renameTopic(topic, event.target.value)} {...languageProps(topic)} /><button className={priorities.has(topic) ? "priority-on" : ""} type="button" onClick={() => togglePriority(topic)}>{priorities.has(topic) && <Check size={12} />}Priority</button><button type="button" onClick={() => moveTopic(index, -1)} disabled={index === 0} aria-label={`Move ${topic} up`}><ArrowUp size={13} /></button><button type="button" onClick={() => moveTopic(index, 1)} disabled={index === topicOrder.length - 1} aria-label={`Move ${topic} down`}><ArrowDown size={13} /></button></div>)}</div>

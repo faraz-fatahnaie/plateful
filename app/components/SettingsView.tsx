@@ -115,7 +115,7 @@ export default function SettingsView({
 
         <article className="settings-card settings-span-two">
           <div className="settings-section-head"><span><Bot size={19} /></span><div><h3>External AI connections</h3><p>Use a signed-in AI account, a cloud API, a private local model, or a custom endpoint.</p></div><button className="secondary-button button-with-icon" type="button" onClick={addConnection}><Plus size={14} />Add connection</button></div>
-          <div className="ai-connection-modes"><span><strong>Account-assisted</strong><small>ChatGPT subscription · copy/open/import</small></span><span><strong>Automatic APIs</strong><small>OpenAI · Anthropic · Gemini · OpenRouter</small></span><span><strong>Local & custom</strong><small>Ollama · LM Studio · compatible APIs</small></span></div>
+          <div className="ai-connection-modes"><span><strong>Account-assisted</strong><small>ChatGPT · Arena Direct Chat · copy/open/import</small></span><span><strong>Automatic APIs</strong><small>OpenAI · Anthropic · Gemini · OpenRouter</small></span><span><strong>Local & custom</strong><small>Ollama · LM Studio · compatible APIs</small></span></div>
           <div className="connection-list">
             {draft.aiConnections.map((connection) => {
               const result = testResults[connection.id];
@@ -133,6 +133,7 @@ export default function SettingsView({
                 </div>
                 <p className="provider-description">{definition.description} {definition.docsUrl && <a href={definition.docsUrl} target="_blank" rel="noreferrer">Provider guide <ExternalLink size={12} /></a>}</p>
                 {connection.provider === "chatgpt" && <p className="provider-caveat"><strong>Your Premium account works here through a manual handoff.</strong> Plateful prepares the request, opens ChatGPT, then imports the JSON result. It never asks for your ChatGPT password or cookies.</p>}
+                {connection.provider === "arena" && <p className="provider-caveat"><strong>Arena uses a manual Direct Chat handoff.</strong> Plateful copies your prepared request, opens arena.ai, and imports the JSON result without asking for Arena credentials.</p>}
                 {connection.provider === "openai" && <p className="provider-caveat">ChatGPT subscriptions and OpenAI API billing are separate. This automatic connection uses an OpenAI API key.</p>}
                 <div className="connection-actions"><span className={result ? (result.ok ? "connection-result ok" : "connection-result error") : "connection-result"}>{result?.ok && <CheckCircle2 size={13} />}{result?.text || "Not tested yet"}</span><button className="text-button danger-text" type="button" onClick={() => removeConnection(connection.id)}><Trash2 size={13} />Remove</button><button className="secondary-button" type="button" onClick={() => testConnection(connection)} disabled={testing === connection.id}>{testing === connection.id ? <><LoaderCircle className="spin" size={14} />Testing…</> : "Test connection"}</button></div>
               </div>;

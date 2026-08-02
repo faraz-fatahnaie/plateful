@@ -80,8 +80,10 @@ future schedule aligned with completed-video checkboxes.
    - Treat CHECKLIST.md as the source of truth.
    - Checked videos are complete, including extra-watched videos.
    - Unchecked missed videos remain at the front of the pending queue.
-   - Preserve past and current-day events as history; replan future events from
-     the chosen boundary, normally tomorrow.
+   - Preserve past Calendar events as history. For Plateful reconciliation,
+     default the replacement boundary to today so missed unchecked videos become
+     today’s first pending work; for standalone Calendar-only reconciliation,
+     use tomorrow unless the user requests today.
    - Preview changes before applying them.
 
 ## Verification

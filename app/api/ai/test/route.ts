@@ -25,7 +25,7 @@ export async function POST(request: Request) {
     const input = (await request.json()) as TestRequest;
     const provider = input.provider || "ollama";
     const definition = getAIProvider(provider);
-    if (provider === "chatgpt") return Response.json({ connected: true, detail: "Manual handoff is ready. No password, cookie, or API key is needed." });
+    if (definition.mode === "manual") return Response.json({ connected: true, detail: `${definition.shortLabel} manual handoff is ready. No password, cookie, or API key is needed.` });
     const baseUrl = safeBaseUrl(input.baseUrl || definition.defaultBaseUrl);
     if (provider === "ollama") {
       const response = await fetch(`${baseUrl}/api/tags`);

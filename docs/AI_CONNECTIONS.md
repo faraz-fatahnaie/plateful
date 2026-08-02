@@ -6,6 +6,7 @@ choose a familiar service without giving the app unsafe credentials.
 | Connection | Mode | Credential in Plateful | Best for |
 | --- | --- | --- | --- |
 | ChatGPT account | Manual copy/open/import | None | Using an existing Free, Plus, Pro, Business, or Enterprise browser session |
+| Arena Direct Chat | Manual copy/open/import | None | Comparing models in a focused direct conversation at arena.ai |
 | OpenAI API | Automatic | API key | Structured Responses API output |
 | Anthropic API | Automatic | API key | Claude models |
 | Google Gemini API | Automatic | API key | Gemini models and Google AI Studio keys |
@@ -32,6 +33,20 @@ choose a familiar service without giving the app unsafe credentials.
 
 A ChatGPT subscription does not include OpenAI API usage. To automate this flow,
 create a separate OpenAI API key and choose **OpenAI API** instead.
+
+## Use Arena Direct Chat
+
+1. Add **Arena Direct Chat** under **Settings → External AI connections**.
+2. In a video’s AI tools, select **Load YouTube transcript**. Plateful fetches
+   the current episode’s public caption track server-side; no YouTube copy/paste
+   is required.
+3. Choose and edit a study prompt, then select **Copy prompt & continue to Arena**.
+4. Use Arena’s **Direct Chat** mode for this focused request. Agent mode remains
+   useful for complex multi-step follow-up work.
+5. Paste Arena’s JSON response back into Plateful and import it.
+
+The handoff copies first and then continues in the same tab so embedded browsers
+cannot block it. Use the browser’s Back button to return to the saved workspace.
 
 ## API-key handling
 

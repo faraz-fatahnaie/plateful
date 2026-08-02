@@ -9,8 +9,8 @@
     "dev": "vinext dev",
     "build": "vinext build",
     "start": "vinext start",
-    "preview:docker": "vite preview --host 0.0.0.0 --port 3000",
-    "test": "node --test tests/source-contract.test.mjs",
+    "preview:docker": "node worker/docker-runtime.mjs",
+    "test": "node --test tests/source-contract.test.mjs tests/schedule-reconciliation.test.mjs",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
     "db:generate": "drizzle-kit generate"
   },

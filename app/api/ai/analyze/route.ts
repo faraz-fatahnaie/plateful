@@ -1,4 +1,5 @@
 import type { AIProvider, CredentialMode } from "../../../../lib/app-settings";
+import { getAIProvider } from "../../../../lib/ai-providers";
 import { artifactSchema, buildStudyPrompt, parseStudyArtifacts } from "../../../../lib/ai-study";
 import type { AIStudyArtifacts } from "../../../../lib/playlist-study";
 import { getServiceUser } from "../../../../lib/server-auth";
@@ -80,7 +81,7 @@ export async function POST(request: Request) {
     const input = (await request.json()) as AnalyzeRequest;
     if (!input.transcript?.trim()) return Response.json({ error: "A transcript is required before AI analysis" }, { status: 400 });
     const provider = input.provider || "ollama";
-    if (provider === "chatgpt") return Response.json({ error: "ChatGPT accounts use the manual copy, open, and import workflow" }, { status: 400 });
+    if (getAIProvider(provider).mode === "manual") return Response.json({ error: `${getAIProvider(provider).shortLabel} uses the manual copy, open, and import workflow` }, { status: 400 });
     const customPrompt = input.prompt?.trim() || "";
     if (customPrompt.length > 80000) return Response.json({ error: "The customized prompt is too long" }, { status: 400 });
     const prompt = customPrompt || buildStudyPrompt(input);

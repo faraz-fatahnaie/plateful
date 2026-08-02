@@ -15,6 +15,7 @@ services:
       GEMINI_API_KEY: "${GEMINI_API_KEY:-}"
       OPENROUTER_API_KEY: "${OPENROUTER_API_KEY:-}"
       COMPATIBLE_AI_API_KEY: "${COMPATIBLE_AI_API_KEY:-}"
+      TRANSCRIPT_PROXY_URL: "http://127.0.0.1:3001"
       RESEND_API_KEY: "${RESEND_API_KEY:-}"
       NOTIFICATION_FROM_EMAIL: "${NOTIFICATION_FROM_EMAIL:-Plateful <study@example.com>}"
     volumes:

@@ -81,7 +81,7 @@ export default function GuideView({ project }: { project: PlaylistStudyProject }
 
         <article className="guide-card">
           <p className="eyebrow">When reality changes</p><h3>The plan adapts without guilt</h3>
-          <div className="scenario"><span className="scenario-icon missed"><RotateCcw size={18} /></span><div><strong>Missed a session</strong><p>Leave those videos unchecked. They move to the front of the next available future session.</p></div></div>
+          <div className="scenario"><span className="scenario-icon missed"><RotateCcw size={18} /></span><div><strong>Missed a session</strong><p>Leave those videos unchecked. On your next visit they move to the front of today’s available queue, and every remaining video is repacked.</p></div></div>
           <div className="scenario"><span className="scenario-icon extra"><FastForward size={18} /></span><div><strong>Watched extra videos</strong><p>Check every completed video. The following sessions close the gap automatically.</p></div></div>
         </article>
 

@@ -1,7 +1,7 @@
-export type AIProvider = "chatgpt" | "openai" | "anthropic" | "gemini" | "openrouter" | "ollama" | "lmstudio" | "compatible";
+export type AIProvider = "chatgpt" | "arena" | "openai" | "anthropic" | "gemini" | "openrouter" | "ollama" | "lmstudio" | "compatible";
 export type CredentialMode = "none" | "session" | "server";
 
-export const AI_PROVIDERS: readonly AIProvider[] = ["chatgpt", "openai", "anthropic", "gemini", "openrouter", "ollama", "lmstudio", "compatible"];
+export const AI_PROVIDERS: readonly AIProvider[] = ["chatgpt", "arena", "openai", "anthropic", "gemini", "openrouter", "ollama", "lmstudio", "compatible"];
 export const CREDENTIAL_MODES: readonly CredentialMode[] = ["none", "session", "server"];
 
 export type AIConnection = {

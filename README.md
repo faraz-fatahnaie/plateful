@@ -38,7 +38,7 @@ data, notes, account, and Calendar credentials remain private.
 - clickable gamified learning path plus day, week, and month roadmap views;
 - bring-your-own-AI study studio for summaries, smart notes, mind maps, practice,
   and quizzes;
-- OpenAI API, local Ollama, and OpenAI-compatible provider adapters;
+- Arena Direct Chat and ChatGPT account handoffs, plus OpenAI API, local Ollama, and OpenAI-compatible provider adapters;
 - productivity, watch-time, topic-progress, quality, pace, and streak reports;
 - in-app notification center and opt-in email/Gmail delivery;
 - an interactive **How to use** tab with a five-step workflow;

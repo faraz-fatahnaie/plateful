@@ -43,6 +43,7 @@ import {
   StudyVideo,
   todaySession,
 } from "../lib/playlist-study";
+import { reconcileProjectSchedule } from "../lib/schedule-reconciliation";
 
 type SaveState = "saved" | "saving" | "preview";
 type AccountMode = "loading" | "authenticated" | "anonymous" | "preview" | "error";
@@ -136,6 +137,7 @@ export default function StudyApp() {
   const accountVideoCount = projects.reduce((sum, item) => sum + item.videos.length, 0);
   const accountNoteCount = projects.reduce((sum, item) => sum + item.videos.filter((video) => video.note.trim()).length, 0);
   const accountLastSyncedAt = [...projects.map((item) => item.updatedAt), appSettings.updatedAt, account?.sync?.lastSyncedAt || ""].filter(Boolean).sort().at(-1) || null;
+  const replanPreview = useMemo(() => reconcileProjectSchedule(project), [project]);
 
   const filteredProjects = useMemo(() => projects.filter((item) => (playlistStatus === "all" || item.status === playlistStatus) && matchesSearch(playlistQuery, item.title, item.goal, item.preferences)).sort((left, right) => {
     if (playlistSort === "title") return left.title.localeCompare(right.title);
@@ -210,17 +212,25 @@ export default function StudyApp() {
       .then((payload) => {
         if (cancelled || !payload.projects) return;
         if (payload.projects.length) {
-          setProjects(payload.projects);
-          setSelectedId(payload.projects[0].id);
+          const reconciled = payload.projects.map((item) => reconcileProjectSchedule(item));
+          const nextProjects = reconciled.map((result) => result.project);
+          setProjects(nextProjects);
+          setSelectedId(nextProjects[0].id);
           setSaveState("saved");
+          reconciled.filter((result) => result.changed).forEach((result) => {
+            void fetch("/api/projects", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(result.project) });
+          });
+          const moved = reconciled.reduce((sum, result) => sum + (result.changed ? result.overdueVideoCount : 0), 0);
+          if (moved) setNotice(`${moved} overdue video${moved === 1 ? " was" : "s were"} automatically moved into the plan from today.`);
           return;
         }
         const starter = cloneSample();
         starter.notificationPreferences = { ...(starter.notificationPreferences || { inApp: true, email: false, emailAddress: "", leadMinutes: 30, dailyDigest: true }), emailAddress: "", email: false };
         starter.updatedAt = new Date().toISOString();
-        setProjects([starter]);
-        setSelectedId(starter.id);
-        fetch("/api/projects", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(starter) }).then((saveResponse) => setSaveState(saveResponse.ok ? "saved" : "preview")).catch(() => setSaveState("preview"));
+        const reconciledStarter = reconcileProjectSchedule(starter).project;
+        setProjects([reconciledStarter]);
+        setSelectedId(reconciledStarter.id);
+        fetch("/api/projects", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(reconciledStarter) }).then((saveResponse) => setSaveState(saveResponse.ok ? "saved" : "preview")).catch(() => setSaveState("preview"));
       })
       .catch(() => setSaveState("preview"));
     return () => {
@@ -448,9 +458,37 @@ export default function StudyApp() {
     setNotice(`Notes saved for episode ${noteVideo.index}.`);
   }
 
-  async function copySyncRequest() {
-    await navigator.clipboard.writeText(buildSkillRequest(project));
-    setNotice("Calendar reconciliation request copied. Paste it into Codex.");
+  function replanFromToday() {
+    const result = reconcileProjectSchedule(project);
+    if (result.changed) {
+      replaceProject(result.project);
+      setNotice(`${result.pendingVideoCount} remaining videos replanned from ${result.boundary}; ${result.calendarChangeCount} Calendar changes are ready to sync.`);
+    } else {
+      setNotice(`The remaining schedule is already current from ${result.boundary}.`);
+    }
+  }
+
+  async function syncReplannedCalendar() {
+    const result = reconcileProjectSchedule(project);
+    const base = result.project;
+    const futureSessionCount = base.sessions.filter((item) => item.date >= result.boundary && item.status === "planned").length;
+    const next: PlaylistStudyProject = {
+      ...base,
+      calendar: {
+        ...base.calendar,
+        syncState: "changes-pending",
+        pendingChangeCount: result.changed ? result.calendarChangeCount : Math.max(base.calendar.pendingChangeCount, futureSessionCount),
+        pendingAction: "sync",
+      },
+      updatedAt: new Date().toISOString(),
+    };
+    replaceProject(next);
+    try {
+      await navigator.clipboard.writeText(buildSkillRequest(next));
+      setNotice(`Full Google Calendar sync request copied for ${futureSessionCount} replanned session${futureSessionCount === 1 ? "" : "s"}. Paste it into Codex to preview and apply.`);
+    } catch {
+      setNotice("Calendar request is ready, but clipboard access was blocked. Export the project JSON and give it to Codex instead.");
+    }
     setShowReplan(false);
   }
 
@@ -647,7 +685,7 @@ export default function StudyApp() {
             <article className="side-card sync-card">
               <div className="section-heading compact"><div><p className="eyebrow">Planner health</p><h3>Calendar</h3></div><span className={`sync-dot ${project.calendar.syncState}`} /></div>
               <div className="calendar-state"><strong>{project.calendar.syncState === "in-sync" ? "Everything is in sync" : project.calendar.syncState === "changes-pending" ? `${project.calendar.pendingChangeCount} change${project.calendar.pendingChangeCount === 1 ? "" : "s"} waiting` : "Calendar not connected"}</strong><span>Google Calendar · {project.calendar.calendarId}</span></div>
-              <button className="primary-button full" type="button" onClick={() => setShowReplan(true)}>{project.calendar.syncState === "changes-pending" ? "Preview reschedule" : "Review sync flow"}</button>
+              <button className="primary-button full" type="button" onClick={() => setShowReplan(true)}>{project.calendar.syncState === "changes-pending" ? "Replan & sync changes" : "Check & sync schedule"}</button>
             </article>
 
             <article className="side-card">
@@ -761,10 +799,10 @@ export default function StudyApp() {
       {showReplan && (
         <div className="modal-backdrop" role="presentation">
           <section className="modal replan-modal" role="dialog" aria-modal="true" aria-label="Calendar reconciliation preview">
-            <div className="modal-heading"><div><p className="eyebrow">Safe reconciliation</p><h2>Preview Calendar changes</h2><p>Past events stay untouched. Only future study blocks are recalculated from actual checkboxes.</p></div><button type="button" className="icon-button" onClick={() => setShowReplan(false)} aria-label="Close">×</button></div>
-            <div className="replan-flow"><div><span>1</span><strong>Read progress</strong><small>{finished} checked videos are complete</small></div><div><span>2</span><strong>Repack sessions</strong><small>Thursday remains free; Friday allows 60 min</small></div><div><span>3</span><strong>Apply safely</strong><small>Codex previews exact Google Calendar edits</small></div></div>
+            <div className="modal-heading"><div><p className="eyebrow">Adaptive planning</p><h2>Replan from today, then sync</h2><p>Unwatched videos from missed days move to the front of today’s queue. Every remaining video is repacked around your daily limits.</p></div><button type="button" className="icon-button" onClick={() => setShowReplan(false)} aria-label="Close">×</button></div>
+            <div className="replan-flow"><div><span>1</span><strong>Recover missed work</strong><small>{replanPreview.overdueVideoCount} overdue video{replanPreview.overdueVideoCount === 1 ? "" : "s"} · boundary {replanPreview.boundary}</small></div><div><span>2</span><strong>Repack everything remaining</strong><small>{replanPreview.pendingVideoCount} videos across {replanPreview.futureSessionCount} study days</small></div><div><span>3</span><strong>Sync safely</strong><small>{replanPreview.calendarChangeCount || project.calendar.pendingChangeCount} Google Calendar change{(replanPreview.calendarChangeCount || project.calendar.pendingChangeCount) === 1 ? "" : "s"} to preview</small></div></div>
             <div className="privacy-banner"><strong>Why Codex handles the final sync</strong><p>The public app never stores Google OAuth secrets. Your installed skill and connected Calendar perform the private mutation after you approve the preview.</p></div>
-            <div className="modal-actions"><button className="secondary-button" type="button" onClick={exportProject}>Export project JSON</button><button className="primary-button" type="button" onClick={copySyncRequest}>Copy Codex sync request</button></div>
+            <div className="modal-actions"><button className="secondary-button" type="button" onClick={replanFromToday}>Replan from today</button><button className="primary-button" type="button" onClick={syncReplannedCalendar}>Sync replanned schedule</button></div>
           </section>
         </div>
       )}

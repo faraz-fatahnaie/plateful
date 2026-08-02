@@ -20,6 +20,7 @@ export type AIProviderDefinition = {
 
 export const AI_PROVIDER_CATALOG: AIProviderDefinition[] = [
   { id: "chatgpt", label: "ChatGPT account", shortLabel: "ChatGPT", group: "account", auth: "manual", mode: "manual", description: "Use your signed-in ChatGPT plan with a copy, open, and import handoff.", defaultName: "My ChatGPT", defaultModel: "My ChatGPT model", defaultBaseUrl: "https://chatgpt.com", docsUrl: "https://chatgpt.com" },
+  { id: "arena", label: "Arena Direct Chat", shortLabel: "Arena", group: "account", auth: "manual", mode: "manual", description: "Use arena.ai Direct Chat with a copy, continue, and import handoff. Direct Chat is the focused choice for per-video study prompts.", defaultName: "Arena Direct Chat", defaultModel: "Arena selected model", defaultBaseUrl: "https://arena.ai/text/direct", docsUrl: "https://arena.ai/" },
   { id: "openai", label: "OpenAI API", shortLabel: "OpenAI", group: "cloud", auth: "api-key", mode: "automatic", description: "Automated study packs through the OpenAI Responses API.", defaultName: "OpenAI API", defaultModel: "gpt-5.6-luna", defaultBaseUrl: "https://api.openai.com/v1", serverSecret: "OPENAI_API_KEY", docsUrl: "https://platform.openai.com/docs" },
   { id: "anthropic", label: "Anthropic API", shortLabel: "Anthropic", group: "cloud", auth: "api-key", mode: "automatic", description: "Connect Claude models with an Anthropic API key.", defaultName: "Anthropic Claude", defaultModel: "claude-sonnet-4-5", defaultBaseUrl: "https://api.anthropic.com", serverSecret: "ANTHROPIC_API_KEY", docsUrl: "https://docs.anthropic.com/en/api/messages" },
   { id: "gemini", label: "Google Gemini API", shortLabel: "Gemini", group: "cloud", auth: "api-key", mode: "automatic", description: "Connect Gemini models with a Google AI API key.", defaultName: "Google Gemini", defaultModel: "gemini-2.5-flash", defaultBaseUrl: "https://generativelanguage.googleapis.com/v1beta", serverSecret: "GEMINI_API_KEY", docsUrl: "https://ai.google.dev/gemini-api/docs" },
@@ -52,4 +53,8 @@ export function providerNeedsKey(provider: AIProvider) {
 
 export function providerAllowsKey(provider: AIProvider) {
   return ["api-key", "optional-key"].includes(getAIProvider(provider).auth);
+}
+
+export function providerUsesManualHandoff(provider: AIProvider) {
+  return getAIProvider(provider).mode === "manual";
 }

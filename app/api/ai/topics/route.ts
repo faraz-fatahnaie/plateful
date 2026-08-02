@@ -62,7 +62,7 @@ export async function POST(request: Request) {
     const videos = (input.videos || []).slice(0, 500);
     if (!videos.length) return Response.json({ error: "A verified video inventory is required" }, { status: 400 });
     const provider = input.provider || "ollama";
-    if (provider === "chatgpt") return Response.json({ error: "ChatGPT accounts use the copy, open, and import workflow" }, { status: 400 });
+    if (getAIProvider(provider).mode === "manual") return Response.json({ error: `${getAIProvider(provider).shortLabel} uses the copy, open, and import workflow` }, { status: 400 });
     const definition = getAIProvider(provider);
     const model = input.model?.trim() || definition.defaultModel;
     if (!model) return Response.json({ error: "Enter a model ID" }, { status: 400 });

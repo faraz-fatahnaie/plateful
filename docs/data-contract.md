@@ -17,7 +17,7 @@ schema version is `1`.
 | `topicOrganization` | Preferred publisher/AI/manual workflow, latest baseline source, publisher availability, and user-edit state. |
 | `videos` | Verified episode inventory plus watched timestamp, practiced, note, transcript, and optional AI artifact state. |
 | `sessions` | Current date-by-date plan. |
-| `calendar` | Provider, target calendar, sync status, pending-change count, and optional pending action/removal-request timestamp. |
+| `calendar` | Provider, target calendar, sync status, pending-change count, optional pending action/removal-request timestamp, and last replanning timestamp. |
 | `notificationPreferences` | Opt-in in-app/email reminder policy; contains no mail credentials. |
 | `notifications` | Durable in-app notification inbox and read state. |
 | `updatedAt` | ISO-8601 last-modified timestamp. |
@@ -35,6 +35,8 @@ The TypeScript definition is in `lib/playlist-study.ts`.
 - AI output is stored in `videos[].aiArtifacts`; a learner's `note` remains
   independent unless they explicitly append generated material.
 - Past Calendar events remain history. Only future playlist events are replaced.
+- The app automatically moves overdue unchecked videos to the front of today’s
+  available queue, then repacks every remaining video before Calendar sync.
 - A Calendar removal request is pending state, not proof of deletion. The
   connected Calendar workflow must preview exact matches and obtain approval.
 - A skill must preserve unknown fields so newer app versions remain compatible.

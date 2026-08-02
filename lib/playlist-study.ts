@@ -111,6 +111,7 @@ export type PlaylistStudyProject = {
     lastSyncedAt: string | null;
     pendingAction?: "sync" | "remove";
     removalRequestedAt?: string | null;
+    lastReplannedAt?: string | null;
   };
   notificationPreferences?: NotificationPreferences;
   notifications?: StudyNotification[];
@@ -227,15 +228,23 @@ export function todaySession(project: PlaylistStudyProject, now = new Date()): S
 }
 
 export function buildSkillRequest(project: PlaylistStudyProject): string {
+  const boundary = dateInTimezone(project.policy.timezone);
+  const desiredSessions = project.sessions
+    .filter((session) => session.date >= boundary && session.status === "planned")
+    .map((session) => `${session.date} ${project.policy.startTime} | ${session.videoIds.join(", ")} | ${session.plannedMinutes} minutes`);
   return [
-    "Use the plan-youtube-playlist-study skill.",
-    `Reconcile project \"${project.title}\" from its fixed playlist-study JSON.`,
-    "Treat checked videos as complete and preserve past Calendar events.",
+    "Use the google-calendar and plan-youtube-playlist-study skills.",
+    `Sync the complete replanned schedule for \"${project.title}\" to Google Calendar.`,
+    `Project ID: ${project.id}; playlist: ${project.playlistUrl}`,
+    `Calendar: ${project.calendar.calendarId}. Replanning boundary: ${boundary}.`,
+    "Treat checked videos as complete. Preserve past events and every unrelated Calendar event.",
     `Timezone: ${project.policy.timezone}; time: ${project.policy.startTime}.`,
     `Skip: ${project.policy.excludedWeekdays.join(", ") || "none"}.`,
     `Friday: ${project.policy.fridayMinutes} minutes; other days: ${project.policy.weekdayMinutes} minutes.`,
     `Priorities: ${project.policy.priorities.join("; ") || "playlist order"}.`,
     `Topic method: ${project.topicOrganization?.preferredMethod || "publisher"}; preserve publisher labels and all user edits.`,
-    "Preview future event changes before applying them.",
+    "Desired current and future sessions:",
+    ...(desiredSessions.length ? desiredSessions : ["No remaining sessions; remove only matching current/future managed events."]),
+    "Match managed events by project metadata and playlist URL. Preview create/update/delete changes before applying them.",
   ].join("\n");
 }

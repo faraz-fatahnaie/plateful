@@ -193,12 +193,13 @@ test("supports broad external AI connections and a safe ChatGPT account handoff"
     source("SECURITY.md"),
   ]);
 
-  for (const provider of ["chatgpt", "openai", "anthropic", "gemini", "openrouter", "ollama", "lmstudio", "compatible"]) {
+  for (const provider of ["chatgpt", "arena", "openai", "anthropic", "gemini", "openrouter", "ollama", "lmstudio", "compatible"]) {
     assert.match(catalog, new RegExp(`id: "${provider}"`));
   }
   assert.match(settings, /Account-assisted/);
   assert.match(settings, /never asks for your ChatGPT password or cookies/);
-  assert.match(video, /Copy prompt & open ChatGPT/);
+  assert.match(video, /Copy prompt & continue to/);
+  assert.match(video, /Load YouTube transcript/);
   assert.match(video, /Import & show result/);
   assert.match(video, /STUDY_PROMPT_PRESETS/);
   assert.match(video, /Editable prompt/);
@@ -210,6 +211,23 @@ test("supports broad external AI connections and a safe ChatGPT account handoff"
   assert.match(env, /GEMINI_API_KEY/);
   assert.match(env, /OPENROUTER_API_KEY/);
   assert.match(security, /never asks for or stores a ChatGPT/);
+});
+
+test("automatically replans overdue unwatched videos from today and prepares a full Calendar sync", async () => {
+  const [app, scheduler, contract, guide] = await Promise.all([
+    source("app/StudyApp.tsx"),
+    source("lib/schedule-reconciliation.ts"),
+    source("lib/playlist-study.ts"),
+    source("app/components/GuideView.tsx"),
+  ]);
+
+  assert.match(app, /reconcileProjectSchedule/);
+  assert.match(app, /Sync replanned schedule/);
+  assert.match(scheduler, /overdueVideoCount/);
+  assert.match(scheduler, /pendingVideosInPlanOrder/);
+  assert.match(scheduler, /session\.date < boundary/);
+  assert.match(contract, /Desired current and future sessions/);
+  assert.match(guide, /move to the front of today’s available queue/);
 });
 
 test("ships a persistent Docker runtime with self-initializing D1 storage", async () => {
