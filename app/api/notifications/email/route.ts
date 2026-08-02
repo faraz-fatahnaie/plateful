@@ -1,3 +1,5 @@
+import { getServiceUser } from "../../../../lib/server-auth";
+
 export const runtime = "edge";
 
 function validEmail(value: string) {
@@ -6,8 +8,13 @@ function validEmail(value: string) {
 
 export async function POST(request: Request) {
   try {
+    const user = await getServiceUser(request);
+    if (!user) return Response.json({ error: "Sign in is required" }, { status: 401 });
     const body = (await request.json()) as { to?: string; subject?: string; message?: string };
     if (!body.to || !validEmail(body.to)) return Response.json({ error: "Enter a valid notification email" }, { status: 400 });
+    if (user.provider !== "development" && body.to.trim().toLowerCase() !== user.email) {
+      return Response.json({ error: "Email reminders can only be sent to your verified account address" }, { status: 403 });
+    }
 
     const { env } = await import("cloudflare:workers");
     const bindings = env as unknown as { RESEND_API_KEY?: string; NOTIFICATION_FROM_EMAIL?: string };

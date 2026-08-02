@@ -78,3 +78,18 @@ export async function getAuthenticatedUser(request: Request): Promise<Authentica
   }
   return null;
 }
+
+/**
+ * Protect routes that can reach third-party services or consume server secrets.
+ * Localhost keeps an isolated preview identity so local AI/caption testing works
+ * without weakening deployed routes.
+ */
+export async function getServiceUser(request: Request): Promise<AuthenticatedUser | null> {
+  const user = await getAuthenticatedUser(request);
+  if (user) return user;
+  const hostname = new URL(request.url).hostname;
+  if (hostname === "localhost" || hostname === "127.0.0.1") {
+    return { email: "local-preview@localhost.test", name: "Local preview", provider: "development" };
+  }
+  return null;
+}

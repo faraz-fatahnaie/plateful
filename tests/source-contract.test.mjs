@@ -88,7 +88,7 @@ test("ships the video cockpit, AI adapters, reports, and notifications", async (
   assert.match(app, /VideoWorkspace/);
   assert.match(app, /ReportsView/);
   assert.match(video, /youtube-nocookie\.com\/embed/);
-  assert.match(video, /AI study studio/);
+  assert.match(video, /AI tools/);
   assert.match(reports, /Weekly watch time/);
   assert.match(notifications, /Email reminders/);
   assert.match(aiRoute, /api\.openai\.com\/v1/);
@@ -115,7 +115,7 @@ test("ships durable settings, external AI connections, and safe Calendar removal
   assert.match(settingsView, /Remove playlist from Calendar/);
   assert.match(settingsView, /API keys are never written to app settings/);
   assert.match(settingsRoute, /getAuthenticatedUser/);
-  assert.match(settingsRoute, /withoutSecrets/);
+  assert.match(settingsRoute, /sanitizeAppSettings/);
   assert.match(aiTest, /TestRequest/);
   assert.match(aiAnalyze, /OPENAI_API_KEY/);
   assert.match(schema, /userSettings/);
@@ -236,4 +236,30 @@ test("ships editable publisher, AI, and manual topic organization", async () => 
   assert.match(skill, /publisher or AI results are suggestions/);
   assert.match(skillContract, /Treat publisher and AI classifications as editable baselines/);
   assert.match(design, /User edits are the final authority/);
+});
+
+test("protects service routes and rejects malformed persisted state", async () => {
+  const [auth, analyze, topics, aiTest, transcript, email, settings, settingsRoute, projectsRoute, validation, contract] = await Promise.all([
+    source("lib/server-auth.ts"),
+    source("app/api/ai/analyze/route.ts"),
+    source("app/api/ai/topics/route.ts"),
+    source("app/api/ai/test/route.ts"),
+    source("app/api/videos/transcript/route.ts"),
+    source("app/api/notifications/email/route.ts"),
+    source("lib/app-settings.ts"),
+    source("app/api/settings/route.ts"),
+    source("app/api/projects/route.ts"),
+    source("lib/playlist-validation.ts"),
+    source("lib/playlist-study.ts"),
+  ]);
+
+  assert.match(auth, /export async function getServiceUser/);
+  for (const route of [analyze, topics, aiTest, transcript, email]) assert.match(route, /getServiceUser\(request\)/);
+  assert.match(email, /verified account address/);
+  assert.match(settings, /Rebuild settings from an allowlist/);
+  assert.match(settingsRoute, /sanitizeAppSettings\(input\)/);
+  assert.match(projectsRoute, /isPlaylistStudyProject\(project\)/);
+  assert.match(validation, /videoIds\.has\(id\)/);
+  assert.match(contract, /unscheduled-\$\{project\.id\}/);
+  assert.match(contract, /session\.date === today/);
 });

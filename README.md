@@ -97,8 +97,9 @@ For self-hosted Google sign-in, follow [docs/GOOGLE_SIGN_IN.md](docs/GOOGLE_SIGN
   configure `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`,
   `OPENROUTER_API_KEY`, or `COMPATIBLE_AI_API_KEY`.
 - AI keys are never written to D1 or project JSON.
-- Email reminders can be delivered to Gmail or any address after the self-hosted
-  server configures `RESEND_API_KEY` and `NOTIFICATION_FROM_EMAIL`.
+- Email reminders can be delivered to the signed-in account after the
+  self-hosted server configures `RESEND_API_KEY` and
+  `NOTIFICATION_FROM_EMAIL`; delivery is restricted to that verified address.
 - A future scheduler can call the existing email endpoint at the preferred lead
   time; the app already stores the user's opt-in reminder policy.
 

@@ -42,20 +42,21 @@ export default function ReportsView({ project }: { project: PlaylistStudyProject
   });
 
   const completionDates = watched.map((video) => video.watchedAt?.slice(0, 10)).filter((value): value is string => Boolean(value));
-  const streak = new Set(completionDates).size;
-  const paceLabel = completedMinutes ? `${Math.max(1, Math.round(completedMinutes / Math.max(1, streak)))} min/day` : "Start today";
+  const activeDays = new Set(completionDates).size;
+  const paceLabel = completedMinutes ? `${Math.max(1, Math.round(completedMinutes / Math.max(1, activeDays)))} min per active day` : "Start today";
+  const milestoneProgress = watched.length ? watched.length % 5 || 5 : 0;
 
   return (
     <section className="tab-panel reports-view">
       <article className="reports-hero">
         <div><span className="feature-kicker"><BarChart3 size={14} /> Honest learning analytics</span><h2>Progress you can act on</h2><p>Planned time is compared with videos you actually marked complete. As your history grows, pace and consistency become more precise.</p></div>
-        <div className="report-level"><span>Level</span><strong>{Math.max(1, Math.floor(watched.length / 5) + 1)}</strong><small>{5 - (watched.length % 5 || 5)} videos to next level</small></div>
+        <div className="report-level"><span>Next milestone</span><strong>{milestoneProgress}/5</strong><small>{milestoneProgress === 5 ? "Milestone reached" : `${5 - milestoneProgress} videos to go`}</small></div>
       </article>
 
       <div className="metric-grid">
         <article><span className="metric-icon mint"><Clock3 size={19} /></span><div><small>Completed watch time</small><strong>{completedMinutes}<i> min</i></strong><p>From checked videos</p></div></article>
         <article><span className="metric-icon saffron"><Gauge size={19} /></span><div><small>Visible completion</small><strong>{visibleProgress}<i>%</i></strong><p>{watched.length} of {project.videos.length} inventoried</p></div></article>
-        <article><span className="metric-icon coral"><Flame size={19} /></span><div><small>Active-day streak</small><strong>{streak}<i> days</i></strong><p>{paceLabel}</p></div></article>
+        <article><span className="metric-icon coral"><Flame size={19} /></span><div><small>Active days</small><strong>{activeDays}<i> days</i></strong><p>{paceLabel}</p></div></article>
         <article><span className="metric-icon sky"><NotebookPen size={19} /></span><div><small>Note coverage</small><strong>{noteCoverage}<i>%</i></strong><p>{notesWritten} personal notes</p></div></article>
       </div>
 

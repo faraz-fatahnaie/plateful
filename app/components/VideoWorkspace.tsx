@@ -37,7 +37,7 @@ function youtubeId(value: string) {
   try {
     const url = new URL(value);
     if (url.hostname === "youtu.be") return url.pathname.slice(1).split("/")[0];
-    if (url.hostname.endsWith("youtube.com")) return url.searchParams.get("v");
+    if (url.hostname === "youtube.com" || url.hostname.endsWith(".youtube.com")) return url.searchParams.get("v");
   } catch {
     return null;
   }
@@ -244,9 +244,9 @@ export default function VideoWorkspace({
       </div>
 
       <div className="workspace-tabs" role="tablist" aria-label="Video workspace sections">
-        <button className={tab === "overview" ? "active" : ""} onClick={() => setTab("overview")} role="tab"><FileText size={15} />Overview</button>
-        <button className={tab === "ai" ? "active" : ""} onClick={() => setTab("ai")} role="tab"><WandSparkles size={15} />AI study studio{video.aiArtifacts && <i />}</button>
-        <button className={tab === "notes" ? "active" : ""} onClick={() => setTab("notes")} role="tab"><NotebookPen size={15} />My note</button>
+        <button className={tab === "overview" ? "active" : ""} aria-selected={tab === "overview"} onClick={() => setTab("overview")} role="tab"><FileText size={15} />Learn</button>
+        <button className={tab === "ai" ? "active" : ""} aria-selected={tab === "ai"} onClick={() => setTab("ai")} role="tab"><WandSparkles size={15} />AI tools{video.aiArtifacts && <i />}</button>
+        <button className={tab === "notes" ? "active" : ""} aria-selected={tab === "notes"} onClick={() => setTab("notes")} role="tab"><NotebookPen size={15} />Notes</button>
       </div>
 
       {message && <div className="workspace-message">{message}</div>}

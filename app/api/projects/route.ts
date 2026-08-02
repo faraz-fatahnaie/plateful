@@ -2,21 +2,8 @@ import { desc, eq } from "drizzle-orm";
 import { getDb } from "../../../db";
 import { playlistProjects } from "../../../db/schema";
 import type { PlaylistStudyProject } from "../../../lib/playlist-study";
+import { isPlaylistStudyProject } from "../../../lib/playlist-validation";
 import { getAuthenticatedUser } from "../../../lib/server-auth";
-
-function isProject(value: unknown): value is PlaylistStudyProject {
-  if (!value || typeof value !== "object") return false;
-  const candidate = value as Partial<PlaylistStudyProject>;
-  return (
-    candidate.schemaVersion === 1 &&
-    typeof candidate.id === "string" &&
-    Boolean(candidate.id.trim()) &&
-    typeof candidate.title === "string" &&
-    Boolean(candidate.title.trim()) &&
-    Array.isArray(candidate.videos) &&
-    Array.isArray(candidate.sessions)
-  );
-}
 
 function routeError(error: unknown) {
   const message = error instanceof Error ? error.message : "Unexpected error";
@@ -49,7 +36,7 @@ export async function POST(request: Request) {
     if (!user) return Response.json({ error: "Sign in is required" }, { status: 401 });
     const email = user.email;
     const project = (await request.json()) as unknown;
-    if (!isProject(project)) {
+    if (!isPlaylistStudyProject(project)) {
       return Response.json({ error: "Invalid playlist-study project" }, { status: 400 });
     }
 

@@ -1,10 +1,12 @@
+import { getServiceUser } from "../../../../lib/server-auth";
+
 export const runtime = "edge";
 
 function youtubeId(value: string) {
   try {
     const url = new URL(value);
     if (url.hostname === "youtu.be") return url.pathname.slice(1).split("/")[0];
-    if (url.hostname.endsWith("youtube.com")) return url.searchParams.get("v");
+    if (url.hostname === "youtube.com" || url.hostname.endsWith(".youtube.com")) return url.searchParams.get("v");
   } catch {
     return null;
   }
@@ -39,6 +41,7 @@ function balancedJsonArray(source: string, marker: string) {
 
 export async function POST(request: Request) {
   try {
+    if (!await getServiceUser(request)) return Response.json({ error: "Sign in is required" }, { status: 401 });
     const { url } = (await request.json()) as { url?: string };
     const id = youtubeId(url || "");
     if (!id) return Response.json({ error: "This episode does not have a direct YouTube video URL" }, { status: 400 });

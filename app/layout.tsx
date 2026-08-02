@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import "@fontsource-variable/manrope";
-import "@fontsource-variable/fraunces";
 import "@fontsource-variable/vazirmatn";
 import "./globals.css";
+import "./redesign.css";
 
 export async function generateMetadata(): Promise<Metadata> {
   const requestHeaders = await headers();
@@ -13,13 +13,13 @@ export async function generateMetadata(): Promise<Metadata> {
   const title = "Plateful — turn playlists into progress";
   const description =
     "A private, adaptive study planner for YouTube playlists, notes, progress, and Calendar reconciliation.";
-  const image = new URL("/og.png", base).toString();
+  const image = new URL("/og-redesign.png", base).toString();
 
   return {
     metadataBase: base,
     title,
     description,
-    openGraph: { title, description, images: [{ url: image, width: 1792, height: 917 }] },
+    openGraph: { title, description, images: [{ url: image, width: 1731, height: 909 }] },
     twitter: { card: "summary_large_image", title, description, images: [image] },
   };
 }

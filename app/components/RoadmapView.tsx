@@ -36,10 +36,15 @@ function monthLabel(value: string) {
   return new Intl.DateTimeFormat("en", { month: "long", year: "numeric" }).format(dateAtNoon(value));
 }
 
-function saturdayWeekKey(value: string) {
+type WeekStart = "saturday" | "sunday" | "monday";
+
+const weekStartDay: Record<WeekStart, number> = { saturday: 6, sunday: 0, monday: 1 };
+const weekDayLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+function weekKey(value: string, weekStartsOn: WeekStart) {
   const date = dateAtNoon(value);
-  const daysFromSaturday = (date.getDay() + 1) % 7;
-  date.setDate(date.getDate() - daysFromSaturday);
+  const daysFromStart = (date.getDay() - weekStartDay[weekStartsOn] + 7) % 7;
+  date.setDate(date.getDate() - daysFromStart);
   return date.toISOString().slice(0, 10);
 }
 
@@ -57,7 +62,7 @@ function durationLabel(seconds: number) {
   return hours ? `${hours}h ${minutes}m` : `${minutes}m`;
 }
 
-export default function RoadmapView({ project, onOpenVideo, onOpenSession, initialQuery = "" }: { project: PlaylistStudyProject; onOpenVideo: (video: StudyVideo) => void; onOpenSession: (session: StudySession) => void; initialQuery?: string }) {
+export default function RoadmapView({ project, weekStartsOn, onOpenVideo, onOpenSession, initialQuery = "" }: { project: PlaylistStudyProject; weekStartsOn: WeekStart; onOpenVideo: (video: StudyVideo) => void; onOpenSession: (session: StudySession) => void; initialQuery?: string }) {
   const [frame, setFrame] = useState<Frame>("journey");
   const [query, setQuery] = useState(initialQuery);
   const [status, setStatus] = useState<"all" | "remaining" | "watched" | "needs-note" | "has-note">("all");
@@ -83,11 +88,11 @@ export default function RoadmapView({ project, onOpenVideo, onOpenSession, initi
   const weeks = useMemo(() => {
     const grouped = new Map<string, StudySession[]>();
     filteredSessions.forEach((session) => {
-      const key = saturdayWeekKey(session.date);
+      const key = weekKey(session.date, weekStartsOn);
       grouped.set(key, [...(grouped.get(key) ?? []), session]);
     });
     return Array.from(grouped.entries()).map(([start, items], index) => ({ start, items, index }));
-  }, [filteredSessions]);
+  }, [filteredSessions, weekStartsOn]);
 
   const months = useMemo(() => {
     const grouped = new Map<string, StudySession[]>();
@@ -233,12 +238,14 @@ export default function RoadmapView({ project, onOpenVideo, onOpenSession, initi
           {months.map((month) => {
             const first = dateAtNoon(`${month.key}-01`);
             const daysInMonth = new Date(first.getFullYear(), first.getMonth() + 1, 0).getDate();
-            const offset = (first.getDay() + 1) % 7;
+            const startDay = weekStartDay[weekStartsOn];
+            const offset = (first.getDay() - startDay + 7) % 7;
             const cells = Array.from({ length: offset + daysInMonth });
+            const orderedWeekdays = Array.from({ length: 7 }, (_, index) => weekDayLabels[(startDay + index) % 7]);
             return (
               <article className="month-card" key={month.key}>
                 <div className="month-heading"><h4>{monthLabel(`${month.key}-01`)}</h4><span>{month.items.length} sessions</span></div>
-                <div className="month-weekdays">{["Sat", "Sun", "Mon", "Tue", "Wed", "Thu", "Fri"].map((day) => <span key={day}>{day}</span>)}</div>
+                <div className="month-weekdays">{orderedWeekdays.map((day) => <span key={day}>{day}</span>)}</div>
                 <div className="month-grid">
                   {cells.map((_, cellIndex) => {
                     if (cellIndex < offset) return <span className="month-cell empty" key={`empty-${cellIndex}`} />;

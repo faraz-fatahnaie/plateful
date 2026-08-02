@@ -174,8 +174,8 @@ export const LPIC_SAMPLE: PlaylistStudyProject = {
     {
       id: "welcome-roadmap",
       kind: "session",
-      title: "Today’s LPIC session is ready",
-      message: "3 networking videos · 48 minutes · starts at 20:00",
+      title: "LPIC networking session scheduled",
+      message: "Episodes 68–70 · 48 minutes · July 31 at 20:00",
       createdAt: "2026-07-31T15:30:00Z",
       read: false,
       target: "today",
@@ -206,8 +206,24 @@ export function completedCount(project: PlaylistStudyProject): number {
   return project.videos.filter((video) => video.watched).length;
 }
 
-export function todaySession(project: PlaylistStudyProject): StudySession {
-  return project.sessions.find((session) => session.status === "planned") ?? project.sessions[0];
+export function dateInTimezone(timezone: string, now = new Date()): string {
+  try {
+    const parts = new Intl.DateTimeFormat("en", { timeZone: timezone, year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(now);
+    const value = (type: Intl.DateTimeFormatPartTypes) => parts.find((part) => part.type === type)?.value || "";
+    return `${value("year")}-${value("month")}-${value("day")}`;
+  } catch {
+    return now.toISOString().slice(0, 10);
+  }
+}
+
+export function todaySession(project: PlaylistStudyProject, now = new Date()): StudySession {
+  const today = dateInTimezone(project.policy.timezone, now);
+  const planned = project.sessions.filter((session) => session.status === "planned");
+  return planned.find((session) => session.date === today)
+    ?? planned.find((session) => session.date > today)
+    ?? planned[0]
+    ?? project.sessions[0]
+    ?? { id: `unscheduled-${project.id}`, date: today, videoIds: [], plannedMinutes: 0, status: "planned" };
 }
 
 export function buildSkillRequest(project: PlaylistStudyProject): string {

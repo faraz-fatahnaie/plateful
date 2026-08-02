@@ -2,6 +2,7 @@ import type { AIProvider, CredentialMode } from "../../../../lib/app-settings";
 import { getAIProvider } from "../../../../lib/ai-providers";
 import { buildTopicClassificationPrompt, parseTopicClassifications, topicClassificationSchema } from "../../../../lib/topic-organization";
 import type { StudyVideo } from "../../../../lib/playlist-study";
+import { getServiceUser } from "../../../../lib/server-auth";
 
 export const runtime = "edge";
 
@@ -56,6 +57,7 @@ async function chatCompletion(input: TopicRequest, provider: AIProvider, prompt:
 
 export async function POST(request: Request) {
   try {
+    if (!await getServiceUser(request)) return Response.json({ error: "Sign in is required" }, { status: 401 });
     const input = (await request.json()) as TopicRequest;
     const videos = (input.videos || []).slice(0, 500);
     if (!videos.length) return Response.json({ error: "A verified video inventory is required" }, { status: 400 });

@@ -27,6 +27,11 @@ written to logs, D1, exported JSON, browser storage, or notifications. Prefer a
 local Ollama or LM Studio endpoint when transcript content must remain on the
 learner's machine.
 
+Routes that can reach AI providers, YouTube captions, or the email provider
+require a verified app identity before any outbound request or server secret is
+used. Localhost receives an isolated preview identity; this exception does not
+apply to deployed hostnames.
+
 Saved AI connection profiles contain only the provider, model, endpoint, and
 credential mode. Session keys live in browser memory only. Self-hosted operators
 may instead configure `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`,
@@ -40,7 +45,9 @@ client.
 
 Email delivery uses a server-side HTTP mail provider. Never request or store a
 Gmail password. Keep `RESEND_API_KEY` and `NOTIFICATION_FROM_EMAIL` in the
-self-hosted server's secret configuration.
+self-hosted server's secret configuration. To prevent the app from becoming a
+mail relay, reminders can be sent only to the authenticated account's verified
+email address.
 
 Report vulnerabilities privately to the repository owner instead of opening a
 public issue containing exploit details or user data.

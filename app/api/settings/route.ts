@@ -1,29 +1,8 @@
 import { eq } from "drizzle-orm";
 import { getDb } from "../../../db";
 import { userAccounts, userSettings } from "../../../db/schema";
-import type { AIConnection, AppSettings } from "../../../lib/app-settings";
+import { sanitizeAppSettings, type AppSettings } from "../../../lib/app-settings";
 import { getAuthenticatedUser } from "../../../lib/server-auth";
-
-function validSettings(value: unknown): value is AppSettings {
-  if (!value || typeof value !== "object") return false;
-  const candidate = value as Partial<AppSettings>;
-  return candidate.schemaVersion === 1 &&
-    typeof candidate.displayName === "string" &&
-    typeof candidate.timezone === "string" &&
-    typeof candidate.defaultStudyTime === "string" &&
-    Array.isArray(candidate.aiConnections);
-}
-
-function withoutSecrets(settings: AppSettings): AppSettings {
-  return {
-    ...settings,
-    aiConnections: settings.aiConnections.map((connection) => {
-      const { apiKey: _discarded, ...safe } = connection as AIConnection & { apiKey?: string };
-      void _discarded;
-      return safe;
-    }),
-  };
-}
 
 export async function GET(request: Request) {
   try {
@@ -44,8 +23,8 @@ export async function POST(request: Request) {
     if (!user) return Response.json({ error: "Sign in is required" }, { status: 401 });
     const email = user.email;
     const input = (await request.json()) as unknown;
-    if (!validSettings(input)) return Response.json({ error: "Invalid app settings" }, { status: 400 });
-    const settings = withoutSecrets({ ...input, updatedAt: new Date().toISOString() });
+    const settings = sanitizeAppSettings(input);
+    if (!settings) return Response.json({ error: "Invalid app settings" }, { status: 400 });
     const db = await getDb();
     await db.insert(userSettings).values({ ownerEmail: email, payload: JSON.stringify(settings), updatedAt: settings.updatedAt }).onConflictDoUpdate({
       target: userSettings.ownerEmail,

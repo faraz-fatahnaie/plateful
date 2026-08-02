@@ -49,7 +49,7 @@ type AccountMode = "loading" | "authenticated" | "anonymous" | "preview" | "erro
 type AppTab = "today" | "roadmap" | "playlists" | "notes" | "reports" | "guide" | "settings" | "video";
 
 const tabCopy: Record<AppTab, { eyebrow: string; title: string }> = {
-  today: { eyebrow: "Your next focused session", title: "Good afternoon, Faraz." },
+  today: { eyebrow: "Your next focused session", title: "Your learning plan for today." },
   roadmap: { eyebrow: "Day · week · month", title: "See the whole road ahead." },
   playlists: { eyebrow: "Your learning library", title: "Every playlist, one system." },
   notes: { eyebrow: "Your knowledge archive", title: "Turn watching into recall." },
@@ -75,6 +75,13 @@ function todayInTimezone(timezone: string) {
   const parts = new Intl.DateTimeFormat("en", { timeZone: timezone, year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date());
   const value = (type: Intl.DateTimeFormatPartTypes) => parts.find((part) => part.type === type)?.value || "";
   return `${value("year")}-${value("month")}-${value("day")}`;
+}
+
+function greetingInTimezone(timezone: string) {
+  const hour = Number(new Intl.DateTimeFormat("en", { timeZone: timezone, hour: "2-digit", hourCycle: "h23" }).format(new Date()));
+  if (hour < 12) return "Good morning";
+  if (hour < 18) return "Good afternoon";
+  return "Good evening";
 }
 
 export default function StudyApp() {
@@ -122,6 +129,10 @@ export default function StudyApp() {
     ? project.videos.find((video) => video.id === selectedVideoId) ?? null
     : null;
   const unreadNotifications = (project.notifications || []).filter((item) => !item.read).length;
+  const displayName = account?.user?.name || appSettings.displayName || "Learner";
+  const firstName = displayName.trim().split(/\s+/)[0] || "Learner";
+  const todayTitle = `${greetingInTimezone(project.policy.timezone)}, ${firstName}.`;
+  const upcomingSessions = project.sessions.filter((item) => item.date >= todayInTimezone(project.policy.timezone)).slice(0, 3);
   const accountVideoCount = projects.reduce((sum, item) => sum + item.videos.length, 0);
   const accountNoteCount = projects.reduce((sum, item) => sum + item.videos.filter((video) => video.note.trim()).length, 0);
   const accountLastSyncedAt = [...projects.map((item) => item.updatedAt), appSettings.updatedAt, account?.sync?.lastSyncedAt || ""].filter(Boolean).sort().at(-1) || null;
@@ -177,6 +188,17 @@ export default function StudyApp() {
       });
     return () => { cancelled = true; };
   }, []);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    if (appSettings.theme === "system") root.removeAttribute("data-theme");
+    else root.dataset.theme = appSettings.theme;
+    root.style.colorScheme = appSettings.theme === "system" ? "light dark" : appSettings.theme;
+  }, [appSettings.theme]);
+
+  useEffect(() => {
+    window.scrollTo({ top: 0 });
+  }, [activeTab]);
 
   useEffect(() => {
     let cancelled = false;
@@ -520,13 +542,13 @@ export default function StudyApp() {
           <span>Plateful</span>
         </div>
         <nav aria-label="Primary navigation">
-          <button className={`nav-item ${activeTab === "today" ? "active" : ""}`} type="button" onClick={goToToday}><Home size={17} />Today</button>
-          <button className={`nav-item ${activeTab === "roadmap" ? "active" : ""}`} type="button" onClick={() => { setRoadmapSeedQuery(""); setActiveTab("roadmap"); }}><Route size={17} />Roadmap</button>
-          <button className={`nav-item ${activeTab === "playlists" ? "active" : ""}`} type="button" onClick={() => setActiveTab("playlists")}><Library size={17} />Playlists</button>
-          <button className={`nav-item ${activeTab === "notes" ? "active" : ""}`} type="button" onClick={() => setActiveTab("notes")}><NotebookPen size={17} />Notes</button>
-          <button className={`nav-item ${activeTab === "reports" ? "active" : ""}`} type="button" onClick={() => setActiveTab("reports")}><BarChart3 size={17} />Reports</button>
-          <button className={`nav-item ${activeTab === "guide" ? "active" : ""}`} type="button" onClick={() => setActiveTab("guide")}><CircleHelp size={17} />How to use</button>
-          <button className={`nav-item ${activeTab === "settings" ? "active" : ""}`} type="button" onClick={() => setActiveTab("settings")}><Settings2 size={17} />Settings</button>
+          <button className={`nav-item ${activeTab === "today" ? "active" : ""}`} aria-current={activeTab === "today" ? "page" : undefined} type="button" onClick={goToToday}><Home size={17} />Today</button>
+          <button className={`nav-item ${activeTab === "roadmap" ? "active" : ""}`} aria-current={activeTab === "roadmap" ? "page" : undefined} type="button" onClick={() => { setRoadmapSeedQuery(""); setActiveTab("roadmap"); }}><Route size={17} />Roadmap</button>
+          <button className={`nav-item ${activeTab === "playlists" ? "active" : ""}`} aria-current={activeTab === "playlists" ? "page" : undefined} type="button" onClick={() => setActiveTab("playlists")}><Library size={17} />Library</button>
+          <button className={`nav-item ${activeTab === "notes" ? "active" : ""}`} aria-current={activeTab === "notes" ? "page" : undefined} type="button" onClick={() => setActiveTab("notes")}><NotebookPen size={17} />Notes</button>
+          <button className={`nav-item ${activeTab === "reports" ? "active" : ""}`} aria-current={activeTab === "reports" ? "page" : undefined} type="button" onClick={() => setActiveTab("reports")}><BarChart3 size={17} />Reports</button>
+          <button className={`nav-item utility-nav ${activeTab === "guide" ? "active" : ""}`} aria-current={activeTab === "guide" ? "page" : undefined} type="button" onClick={() => setActiveTab("guide")}><CircleHelp size={17} />How to use</button>
+          <button className={`nav-item utility-nav ${activeTab === "settings" ? "active" : ""}`} aria-current={activeTab === "settings" ? "page" : undefined} type="button" onClick={() => setActiveTab("settings")}><Settings2 size={17} />Settings</button>
         </nav>
         <div className="sidebar-bottom">
           <div className="privacy-note"><ShieldCheck size={15} /><div><strong>Private workspace</strong><small>Your study data stays in your account.</small></div></div>
@@ -539,7 +561,7 @@ export default function StudyApp() {
         <header className="topbar">
           <div>
             <p className="eyebrow">{tabCopy[activeTab].eyebrow}</p>
-            <h1>{tabCopy[activeTab].title}</h1>
+            <h1>{activeTab === "today" ? todayTitle : tabCopy[activeTab].title}</h1>
           </div>
           <div className="top-actions">
             <button className="global-search-trigger" type="button" onClick={() => setShowGlobalSearch(true)} aria-label="Search all learning content"><Search size={15} /><span>Search</span><kbd>Ctrl K</kbd></button>
@@ -575,9 +597,9 @@ export default function StudyApp() {
 
             {project.videos.length ? (
               <article className="session-card" id="today-session">
-                <div className="section-heading">
-                  <div><p className="eyebrow">{isFocusedSession ? `Selected session · ${readableDate(session.date)}` : "Today’s session"}</p><h2>{sessionVideos.length} videos · {session.plannedMinutes} minutes</h2></div>
-                  <span className="time-chip"><Clock3 size={13} />{project.policy.startTime}</span>
+                <div className="section-heading session-heading">
+                  <div><p className="eyebrow">{isFocusedSession ? `Selected session · ${readableDate(session.date)}` : "Today’s session"}</p><h2>{sessionVideos.length} {sessionVideos.length === 1 ? "video" : "videos"} · {session.plannedMinutes} minutes</h2></div>
+                  <div className="session-heading-actions"><span className="time-chip"><Clock3 size={13} />{project.policy.startTime}</span>{sessionVideos.length > 0 && <button className="primary-button session-start" type="button" onClick={() => openVideo(sessionVideos.find((video) => !video.watched) || sessionVideos[0])}><Play size={14} fill="currentColor" />{sessionVideos.some((video) => video.watched) ? "Continue session" : "Start session"}</button>}</div>
                 </div>
                 {isFocusedSession && <button className="return-today" type="button" onClick={() => setFocusedSessionId(null)}>← Return to today’s session</button>}
                 <div className="video-list">
@@ -611,11 +633,11 @@ export default function StudyApp() {
               <div className="topic-provenance"><span>{project.topicOrganization?.lastGeneratedBy === "ai" ? "AI classified" : project.topicOrganization?.lastGeneratedBy === "manual" ? "Manually organized" : "Publisher structure"}</span>{project.topicOrganization?.userEdited && <span>Edited by you</span>}<small>All topics and priorities remain editable.</small></div>
               <div className="topic-grid">
                 {(topics.length ? topics : project.policy.priorities.map((name) => ({ name, done: 0, total: 0 }))).map((topic, index) => (
-                  <article className="topic-card" key={topic.name}>
+                  <button className="topic-card" key={topic.name} type="button" onClick={() => { setRoadmapSeedQuery(topic.name); setActiveTab("roadmap"); }}>
                     <span className={`topic-icon color-${index % 3}`}>{index + 1}</span>
                     <div><strong {...languageProps(topic.name)}>{topic.name}</strong><span>{topic.total ? `${topic.done} of ${topic.total} visible videos complete` : "Waiting for inventory"}</span></div>
                     <span>›</span>
-                  </article>
+                  </button>
                 ))}
               </div>
             </section>
@@ -631,10 +653,10 @@ export default function StudyApp() {
             <article className="side-card">
               <div className="section-heading compact"><div><p className="eyebrow">Coming up</p><h3>Next sessions</h3></div></div>
               <div className="timeline">
-                {project.sessions.slice(1, 4).map((item, index) => (
+                {upcomingSessions.map((item, index) => (
                   <div className="timeline-item" key={item.id}><span className={index === 0 ? "current" : ""} /><div><strong>{readableDate(item.date)}</strong><small>{item.videoIds.length} video{item.videoIds.length === 1 ? "" : "s"} · {item.plannedMinutes} min</small></div></div>
                 ))}
-                {!project.sessions.length && <p className="muted">Sessions appear after the skill completes planning.</p>}
+                {!upcomingSessions.length && <p className="muted">Sessions appear after the skill completes planning.</p>}
               </div>
             </article>
 
@@ -648,7 +670,7 @@ export default function StudyApp() {
           </aside>
         </div>}
 
-        {activeTab === "roadmap" && <RoadmapView key={`${project.id}-${roadmapSeedQuery}`} project={project} onOpenVideo={openVideo} onOpenSession={openSession} initialQuery={roadmapSeedQuery} />}
+        {activeTab === "roadmap" && <RoadmapView key={`${project.id}-${roadmapSeedQuery}`} project={project} weekStartsOn={appSettings.weekStartsOn} onOpenVideo={openVideo} onOpenSession={openSession} initialQuery={roadmapSeedQuery} />}
 
         {activeTab === "playlists" && (
           <section className="tab-panel library-view">
@@ -695,24 +717,27 @@ export default function StudyApp() {
         {activeTab === "video" && selectedVideo && <VideoWorkspace key={selectedVideo.id} project={project} video={selectedVideo} aiConnection={appSettings.aiConnections.find((item) => item.id === appSettings.activeAIConnectionId)} aiApiKey={appSettings.activeAIConnectionId ? aiSessionKeys[appSettings.activeAIConnectionId] || "" : ""} persistTranscript={appSettings.privacy.allowTranscriptStorage} onBack={leaveVideo} onToggleWatched={toggleWatched} onSaveVideo={saveVideo} onOpenVideo={openVideo} />}
       </section>
 
-      {showNotifications && <NotificationCenter project={project} onClose={() => setShowNotifications(false)} onUpdate={replaceProject} onNavigate={navigateFromNotification} />}
+      {showNotifications && <NotificationCenter project={project} accountEmail={account?.user?.email} onClose={() => setShowNotifications(false)} onUpdate={replaceProject} onNavigate={navigateFromNotification} />}
       {showGlobalSearch && <GlobalSearch projects={projects} onClose={() => setShowGlobalSearch(false)} onOpenProject={openGlobalProject} onOpenVideo={openGlobalVideo} onOpenSession={openGlobalSession} onOpenTopic={openGlobalTopic} />}
       {showTopicOrganizer && <TopicOrganizer project={project} aiConnection={appSettings.aiConnections.find((item) => item.id === appSettings.activeAIConnectionId)} aiApiKey={appSettings.activeAIConnectionId ? aiSessionKeys[appSettings.activeAIConnectionId] || "" : ""} onSave={replaceProject} onClose={() => setShowTopicOrganizer(false)} />}
 
       {showAdd && (
         <div className="modal-backdrop" role="presentation">
-          <form className="modal wide-modal" onSubmit={addProject}>
+          <form className="modal wide-modal" role="dialog" aria-modal="true" aria-label="Add a YouTube playlist" onKeyDown={(event) => { if (event.key === "Escape") setShowAdd(false); }} onSubmit={addProject}>
             <div className="modal-heading"><div><p className="eyebrow">New study project</p><h2>Add a YouTube playlist</h2><p>The skill will verify videos and build the detailed plan after this intake.</p></div><button type="button" className="icon-button" onClick={() => setShowAdd(false)} aria-label="Close">×</button></div>
             <div className="form-grid">
-              <label className="span-two">Playlist URL<input name="url" type="url" required placeholder="https://www.youtube.com/playlist?list=…" /></label>
+              <div className="form-section-heading span-two"><span>1</span><div><strong>Playlist</strong><small>Start with the link and what you want to achieve.</small></div></div>
+              <label className="span-two">Playlist URL<input name="url" type="url" required autoFocus placeholder="https://www.youtube.com/playlist?list=…" /></label>
               <label>Project name<input name="title" required placeholder="Linux networking course" dir="auto" /></label>
               <label>Start date<input name="startDate" type="date" defaultValue="2026-08-01" /></label>
               <label className="span-two">Learning goal<textarea name="goal" rows={2} placeholder="What should you be able to do when finished?" dir="auto" /></label>
+              <div className="form-section-heading span-two"><span>2</span><div><strong>Weekly rhythm</strong><small>Set realistic study capacity. You can change it later.</small></div></div>
               <label>Minutes on normal days<input name="weekdayMinutes" type="number" min="5" defaultValue="30" /></label>
               <label>Minutes on Friday<input name="fridayMinutes" type="number" min="5" defaultValue="60" /></label>
               <label>Study time<input name="startTime" type="time" defaultValue={appSettings.defaultStudyTime} /></label>
               <label>Timezone<input name="timezone" defaultValue={appSettings.timezone} /></label>
               <label>Excluded weekdays<input name="excluded" defaultValue="Thursday" /></label>
+              <div className="form-section-heading span-two"><span>3</span><div><strong>Learning map</strong><small>Choose how topics are organized and what comes first.</small></div></div>
               <label>Topic organization<select name="topicMethod" defaultValue="publisher"><option value="publisher">Publisher structure (recommended)</option><option value="ai">Classify with my AI connection</option><option value="manual">I will organize topics</option></select></label>
               <label>Priority topics<input name="priorities" placeholder="Network, disks" dir="auto" /></label>
               <label className="span-two">Other preferences<textarea name="preferences" rows={2} placeholder="Do not split videos; use Fridays for labs…" dir="auto" /></label>

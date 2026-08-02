@@ -1,6 +1,7 @@
 import type { AIProvider, CredentialMode } from "../../../../lib/app-settings";
 import { artifactSchema, buildStudyPrompt, parseStudyArtifacts } from "../../../../lib/ai-study";
 import type { AIStudyArtifacts } from "../../../../lib/playlist-study";
+import { getServiceUser } from "../../../../lib/server-auth";
 
 export const runtime = "edge";
 
@@ -74,6 +75,7 @@ async function callChatCompletions(input: AnalyzeRequest, provider: AIProvider, 
 
 export async function POST(request: Request) {
   try {
+    if (!await getServiceUser(request)) return Response.json({ error: "Sign in is required" }, { status: 401 });
     const input = (await request.json()) as AnalyzeRequest;
     if (!input.transcript?.trim()) return Response.json({ error: "A transcript is required before AI analysis" }, { status: 400 });
     const provider = input.provider || "ollama";
