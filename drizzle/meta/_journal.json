@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1785499200000,
+      "tag": "0000_playlist_projects",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1785505031964,
+      "tag": "0001_wealthy_beyonder",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1785506380853,
+      "tag": "0002_lush_shiva",
+      "breakpoints": true
+    }
+  ]
+}

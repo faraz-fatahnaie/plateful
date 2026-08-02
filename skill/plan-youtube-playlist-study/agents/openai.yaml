@@ -1,0 +1,4 @@
+interface:
+  display_name: "Plan YouTube Playlist Study"
+  short_description: "Turn playlists into adaptive study plans"
+  default_prompt: "Use $plan-youtube-playlist-study to turn this YouTube playlist into a topic-prioritized study plan, calendar, and progress tracker."

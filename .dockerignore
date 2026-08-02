@@ -1,0 +1,11 @@
+.git
+.github
+.wrangler
+.vinext
+dist
+node_modules
+*.log
+.env
+.env.*
+!.env.example
+tsconfig.tsbuildinfo
