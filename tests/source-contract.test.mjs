@@ -198,8 +198,10 @@ test("supports broad external AI connections and a safe ChatGPT account handoff"
   }
   assert.match(settings, /Account-assisted/);
   assert.match(settings, /never asks for your ChatGPT password or cookies/);
-  assert.match(video, /Copy structured request/);
-  assert.match(video, /Import study pack/);
+  assert.match(video, /Copy prompt & open ChatGPT/);
+  assert.match(video, /Import & show result/);
+  assert.match(video, /STUDY_PROMPT_PRESETS/);
+  assert.match(video, /Editable prompt/);
   assert.match(analyze, /api\.anthropic\.com/);
   assert.match(analyze, /generativelanguage\.googleapis\.com/);
   assert.match(analyze, /openrouter\.ai/);
@@ -208,6 +210,28 @@ test("supports broad external AI connections and a safe ChatGPT account handoff"
   assert.match(env, /GEMINI_API_KEY/);
   assert.match(env, /OPENROUTER_API_KEY/);
   assert.match(security, /never asks for or stores a ChatGPT/);
+});
+
+test("ships a persistent Docker runtime with self-initializing D1 storage", async () => {
+  const [dockerfile, compose, database, auth, health, packageJson] = await Promise.all([
+    source("Dockerfile"),
+    source("compose.yaml"),
+    source("db/index.ts"),
+    source("lib/server-auth.ts"),
+    source("app/api/health/route.ts"),
+    source("package.json"),
+  ]);
+
+  assert.match(dockerfile, /FROM node:24-bookworm-slim/);
+  assert.match(dockerfile, /HEALTHCHECK/);
+  assert.match(compose, /plateful-data:\/app\/\.wrangler\/state/);
+  assert.match(compose, /127\.0\.0\.1/);
+  assert.match(database, /CREATE TABLE IF NOT EXISTS playlist_projects/);
+  assert.match(database, /CREATE TABLE IF NOT EXISTS user_settings/);
+  assert.match(database, /CREATE TABLE IF NOT EXISTS user_accounts/);
+  assert.match(auth, /local-preview@localhost\.test/);
+  assert.match(health, /storage: "d1"/);
+  assert.match(packageJson, /preview:docker/);
 });
 
 test("ships editable publisher, AI, and manual topic organization", async () => {

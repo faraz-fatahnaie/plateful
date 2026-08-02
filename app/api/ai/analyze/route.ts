@@ -13,6 +13,7 @@ type AnalyzeRequest = {
   title?: string;
   topic?: string;
   transcript?: string;
+  prompt?: string;
   transcriptSource?: AIStudyArtifacts["transcriptSource"];
   credentialMode?: CredentialMode;
 };
@@ -80,7 +81,9 @@ export async function POST(request: Request) {
     if (!input.transcript?.trim()) return Response.json({ error: "A transcript is required before AI analysis" }, { status: 400 });
     const provider = input.provider || "ollama";
     if (provider === "chatgpt") return Response.json({ error: "ChatGPT accounts use the manual copy, open, and import workflow" }, { status: 400 });
-    const prompt = buildStudyPrompt(input);
+    const customPrompt = input.prompt?.trim() || "";
+    if (customPrompt.length > 80000) return Response.json({ error: "The customized prompt is too long" }, { status: 400 });
+    const prompt = customPrompt || buildStudyPrompt(input);
     const defaults: Partial<Record<AIProvider, string>> = { openai: "gpt-5.6-luna", anthropic: "claude-sonnet-4-5", gemini: "gemini-2.5-flash", openrouter: "openai/gpt-4.1-mini", ollama: "gemma3" };
     const model = input.model?.trim() || defaults[provider] || "";
     if (!model) return Response.json({ error: "Enter a model ID" }, { status: 400 });

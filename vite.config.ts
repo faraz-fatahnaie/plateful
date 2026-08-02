@@ -8,12 +8,32 @@ const SITE_CREATOR_PLACEHOLDER_DATABASE_ID =
 
 const { d1, r2 } = hostingConfig;
 
+const runtimeVariableNames = [
+  "AUTH_MODE",
+  "CF_ACCESS_TEAM_DOMAIN",
+  "CF_ACCESS_AUD",
+  "AUTH_LOGIN_URL",
+  "DEV_AUTH_EMAIL",
+  "OPENAI_API_KEY",
+  "ANTHROPIC_API_KEY",
+  "GEMINI_API_KEY",
+  "OPENROUTER_API_KEY",
+  "COMPATIBLE_AI_API_KEY",
+  "RESEND_API_KEY",
+  "NOTIFICATION_FROM_EMAIL",
+] as const;
+
+const runtimeVars = Object.fromEntries(
+  runtimeVariableNames.flatMap((name) => process.env[name] ? [[name, process.env[name] as string]] : []),
+);
+
 // macOS Seatbelt blocks FSEvents, so Codex previews need polling for HMR.
 const isCodexSeatbeltSandbox = process.env.CODEX_SANDBOX === "seatbelt";
 
 const localBindingConfig = {
   main: "./worker/index.ts",
   compatibility_flags: ["nodejs_compat"],
+  vars: runtimeVars,
   d1_databases: d1
     ? [
         {

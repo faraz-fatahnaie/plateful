@@ -19,11 +19,14 @@ choose a familiar service without giving the app unsafe credentials.
 1. In **Settings → External AI connections**, add **ChatGPT account** and make
    it the default.
 2. Open a video, load or paste its transcript, and choose **AI study studio**.
-3. Copy the structured request and open ChatGPT. Plateful never asks for your
-   ChatGPT password, cookies, or account token.
-4. Paste the request into ChatGPT, copy its JSON response, paste it into
-   Plateful, and select **Import study pack**.
-5. Plateful validates the summary, key points, commands, mind map, practice, and
+3. Choose **Complete study pack**, **Clear summary**, **Important points**,
+   **Mind map**, or **Practice & quiz**. Review and freely edit the prepared
+   prompt.
+4. Select **Copy prompt & open ChatGPT**. Plateful never asks for your ChatGPT
+   password, cookies, or account token.
+5. Paste the request into ChatGPT, copy its JSON response, paste it into
+   Plateful, and select **Import & show result**.
+6. Plateful validates the summary, key points, commands, mind map, practice, and
    quiz before saving them. Personal notes stay separate until explicitly
    appended.
 

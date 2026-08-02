@@ -27,7 +27,7 @@ import {
 import type { AIStudyArtifacts, PlaylistStudyProject, StudyVideo } from "../../lib/playlist-study";
 import type { AIConnection, AIProvider } from "../../lib/app-settings";
 import { AI_PROVIDER_CATALOG, getAIProvider, providerAllowsKey, providerDefaults as getProviderDefaults } from "../../lib/ai-providers";
-import { buildStudyPrompt, parseStudyArtifacts } from "../../lib/ai-study";
+import { buildStudyPrompt, parseStudyArtifacts, STUDY_PROMPT_PRESETS, type StudyPromptPresetId } from "../../lib/ai-study";
 import { formatDuration } from "../../lib/playlist-study";
 import { languageProps } from "../../lib/discovery";
 
@@ -82,6 +82,9 @@ export default function VideoWorkspace({
   const [transcriptBusy, setTranscriptBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [manualResponse, setManualResponse] = useState("");
+  const [promptPreset, setPromptPreset] = useState<StudyPromptPresetId>("complete");
+  const [promptDraft, setPromptDraft] = useState(() => buildStudyPrompt({ title: video.title, topic: video.topic, transcript: video.transcript || "" }));
+  const [promptCustomized, setPromptCustomized] = useState(false);
 
   const session = project.sessions.find((item) => item.videoIds.includes(video.id));
   const position = session ? session.videoIds.indexOf(video.id) + 1 : 0;
@@ -131,6 +134,7 @@ export default function VideoWorkspace({
       if (!response.ok || !payload.transcript) throw new Error(payload.error || "Captions unavailable");
       setTranscript(payload.transcript);
       setTranscriptSource("youtube-captions");
+      if (!promptCustomized) setPromptDraft(buildStudyPrompt({ title: video.title, topic: video.topic, transcript: payload.transcript }, promptPreset));
       if (persistTranscript) onSaveVideo({ ...video, transcript: payload.transcript });
       setMessage(`Public captions loaded${persistTranscript ? " and saved" : " for this session only"}. Review them before generating study material.`);
     } catch (error) {
@@ -151,7 +155,7 @@ export default function VideoWorkspace({
       const response = await fetch("/api/ai/analyze", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ provider, model, baseUrl, apiKey, credentialMode, title: video.title, topic: video.topic, transcript, transcriptSource }),
+        body: JSON.stringify({ provider, model, baseUrl, apiKey, credentialMode, title: video.title, topic: video.topic, transcript, transcriptSource, prompt: promptDraft }),
       });
       const payload = (await response.json()) as { artifacts?: AIStudyArtifacts; error?: string };
       if (!response.ok || !payload.artifacts) throw new Error(payload.error || "AI analysis failed");
@@ -171,11 +175,28 @@ export default function VideoWorkspace({
       return;
     }
     try {
-      await navigator.clipboard.writeText(buildStudyPrompt({ title: video.title, topic: video.topic, transcript }));
-      setMessage("Structured request copied. Open ChatGPT, paste it, then bring the JSON response back here.");
+      await navigator.clipboard.writeText(promptDraft.trim() || buildStudyPrompt({ title: video.title, topic: video.topic, transcript }, promptPreset));
+      setMessage("Prompt copied. Paste it in ChatGPT, then bring the JSON response back here.");
     } catch {
       setMessage("Clipboard access was blocked. Select and copy the prepared request manually.");
     }
+  }
+
+  function refreshPrompt(nextPreset: StudyPromptPresetId = promptPreset) {
+    setPromptPreset(nextPreset);
+    setPromptDraft(buildStudyPrompt({ title: video.title, topic: video.topic, transcript }, nextPreset));
+    setPromptCustomized(false);
+    setMessage("Prepared prompt refreshed from the current transcript. You can edit every word before sending it.");
+  }
+
+  async function openChatGPTHandoff() {
+    if (!transcript.trim()) {
+      setMessage("Load captions or paste a transcript first.");
+      return;
+    }
+    const chatWindow = window.open("https://chatgpt.com/", "_blank", "noopener,noreferrer");
+    await copyManualRequest();
+    if (!chatWindow) setMessage("Prompt copied. Your browser blocked the new tab, so open chatgpt.com and paste it there.");
   }
 
   function importManualResponse() {
@@ -262,14 +283,21 @@ export default function VideoWorkspace({
         <div className="ai-studio workspace-panel">
           <article className="ai-control-card">
             <div className="ai-card-heading"><span><Bot size={21} /></span><div><p className="eyebrow">Bring your own AI</p><h3>Create a study pack</h3></div></div>
-            {aiConnection && <div className="active-ai-connection"><CheckCircle2 size={14} /><span>Using Settings connection: <strong>{aiConnection.name}</strong></span></div>}
+            {aiConnection && <div className="active-ai-connection"><CheckCircle2 size={14} /><span>{provider === aiConnection.provider ? <>Using Settings connection: <strong>{aiConnection.name}</strong></> : <>Temporary video override: <strong>{getAIProvider(provider).label}</strong></>}</span></div>}
             <div className="provider-picker"><label>Connection type<select value={provider} onChange={(event) => setProviderDefaults(event.target.value as AIProvider)}>{AI_PROVIDER_CATALOG.map((item) => <option value={item.id} key={item.id}>{item.label}</option>)}</select></label><p>{getAIProvider(provider).description}</p></div>
             <div className="ai-fields"><label>Model<input value={model} onChange={(event) => setModel(event.target.value)} placeholder="Model ID" /></label><label>Endpoint<input value={baseUrl} onChange={(event) => setBaseUrl(event.target.value)} /></label>{providerAllowsKey(provider) && credentialMode === "session" && <label>API key <span>used once, never saved</span><div className="secret-input"><KeyRound size={14} /><input type="password" value={apiKey} onChange={(event) => setApiKey(event.target.value)} placeholder="••••••••••" autoComplete="off" /></div></label>}{providerAllowsKey(provider) && credentialMode === "server" && <p className="server-key-ready">Using the server-managed secret configured in Settings.</p>}</div>
             {provider === "chatgpt" && <p className="provider-caveat"><strong>ChatGPT Premium handoff:</strong> this uses your existing signed-in ChatGPT browser session. Plateful does not request your password, cookies, or an API key.</p>}
             {provider === "openai" && <p className="provider-caveat">A ChatGPT subscription is separate from API access. This automatic connection requires an OpenAI API key.</p>}
             <div className="transcript-heading"><div><strong>Video transcript</strong><small>AI analyzes this text—not the video stream.</small></div><button onClick={loadTranscript} disabled={transcriptBusy}>{transcriptBusy ? <LoaderCircle className="spin" size={14} /> : <RefreshCw size={14} />}Try captions</button></div>
-            <textarea className="transcript-editor" value={transcript} onChange={(event) => { setTranscript(event.target.value); setTranscriptSource("pasted"); }} placeholder="Load public captions or paste the transcript here…" dir="auto" />
-            {provider === "chatgpt" ? <div className="manual-ai-handoff"><div className="manual-handoff-actions"><button className="secondary-button button-with-icon" type="button" onClick={copyManualRequest}><Copy size={15} />1. Copy structured request</button><a className="primary-button button-with-icon" href="https://chatgpt.com" target="_blank" rel="noreferrer"><ExternalLink size={15} />2. Open ChatGPT</a></div><label>3. Paste ChatGPT&apos;s JSON response<textarea value={manualResponse} onChange={(event) => setManualResponse(event.target.value)} placeholder={'{"summary":"…","keyPoints":[…],"commands":[],"mindMap":[…],"practice":[…],"quiz":[…]}'} dir="auto" /></label><button className="primary-button full button-with-icon" type="button" onClick={importManualResponse} disabled={!manualResponse.trim()}><Upload size={15} />Import study pack</button></div> : <button className="primary-button full ai-generate-button" type="button" disabled={aiBusy} onClick={analyze}>{aiBusy ? <LoaderCircle className="spin" size={16} /> : <Sparkles size={16} />}{aiBusy ? "Building your study pack…" : video.aiArtifacts ? "Regenerate study pack" : "Generate summary, notes & mind map"}</button>}
+            <textarea className="transcript-editor" value={transcript} onChange={(event) => { const value = event.target.value; setTranscript(value); setTranscriptSource("pasted"); if (!promptCustomized) setPromptDraft(buildStudyPrompt({ title: video.title, topic: video.topic, transcript: value }, promptPreset)); }} placeholder="Load public captions or paste the transcript here…" dir="auto" />
+            <div className="prompt-workbench">
+              <div className="prompt-workbench-heading"><div><strong>What should AI create?</strong><small>Choose a starting point, then edit the prepared prompt.</small></div><button type="button" onClick={() => refreshPrompt()}><RefreshCw size={13} />Refresh</button></div>
+              <div className="prompt-presets" role="list" aria-label="Study prompt presets">
+                {STUDY_PROMPT_PRESETS.map((item) => <button type="button" role="listitem" className={promptPreset === item.id ? "active" : ""} key={item.id} onClick={() => refreshPrompt(item.id)}><strong>{item.label}</strong><small>{item.description}</small></button>)}
+              </div>
+              <label className="prompt-editor-label">Editable prompt<textarea className="prompt-editor" value={promptDraft} onChange={(event) => { setPromptDraft(event.target.value); setPromptCustomized(true); }} dir="auto" /></label>
+            </div>
+            {provider === "chatgpt" ? <div className="manual-ai-handoff"><div className="handoff-step"><span>1</span><div><strong>Send the prepared prompt</strong><small>The button copies your edited prompt and opens your signed-in ChatGPT.</small></div></div><button className="primary-button full button-with-icon" type="button" onClick={openChatGPTHandoff}><ExternalLink size={15} />Copy prompt & open ChatGPT</button><button className="text-button copy-only-button" type="button" onClick={copyManualRequest}><Copy size={14} />Copy only</button><div className="handoff-step"><span>2</span><div><strong>Bring the answer back</strong><small>Copy ChatGPT&apos;s JSON answer and paste it below. Plateful validates it before saving.</small></div></div><label>ChatGPT response<textarea value={manualResponse} onChange={(event) => setManualResponse(event.target.value)} placeholder={'{"summary":"…","keyPoints":[…],"commands":[],"mindMap":[…],"practice":[…],"quiz":[…]}'} dir="auto" /></label><button className="secondary-button full button-with-icon" type="button" onClick={importManualResponse} disabled={!manualResponse.trim()}><Upload size={15} />Import & show result</button></div> : <button className="primary-button full ai-generate-button" type="button" disabled={aiBusy || !promptDraft.trim()} onClick={analyze}>{aiBusy ? <LoaderCircle className="spin" size={16} /> : <Sparkles size={16} />}{aiBusy ? "Building your study pack…" : video.aiArtifacts ? "Regenerate with this prompt" : "Send prompt & create study pack"}</button>}
           </article>
 
           <article className="ai-results-card">
@@ -277,8 +305,10 @@ export default function VideoWorkspace({
               <div className="ai-result-heading"><div><p className="eyebrow">AI study pack</p><h3>{video.aiArtifacts.model}</h3></div><span>{new Date(video.aiArtifacts.generatedAt).toLocaleDateString()}</span></div>
               <section className="artifact-section"><h4>Summary</h4><p {...languageProps(video.aiArtifacts.summary)}>{video.aiArtifacts.summary}</p></section>
               <section className="artifact-section"><h4>Key ideas</h4><ul>{video.aiArtifacts.keyPoints.map((point) => <li {...languageProps(point)} key={point}>{point}</li>)}</ul></section>
+              {video.aiArtifacts.commands.length > 0 && <section className="artifact-section"><h4>Commands & examples</h4><div className="command-list">{video.aiArtifacts.commands.map((command) => <code key={command} {...languageProps(command)}>{command}</code>)}</div></section>}
               <section className="artifact-section"><h4>Mind map</h4><div className="mind-map"><strong {...languageProps(video.topic)}>{video.topic}</strong><div>{video.aiArtifacts.mindMap.map((branch) => <span key={branch.label}><b {...languageProps(branch.label)}>{branch.label}</b>{branch.children.map((child) => <small {...languageProps(child)} key={child}>{child}</small>)}</span>)}</div></div></section>
               <section className="artifact-section"><h4>Practice</h4><ol>{video.aiArtifacts.practice.map((item) => <li {...languageProps(item)} key={item}>{item}</li>)}</ol></section>
+              <section className="artifact-section"><h4>Quick quiz</h4><div className="quiz-list">{video.aiArtifacts.quiz.map((item, quizIndex) => <details key={`${item.question}-${quizIndex}`}><summary><span>{quizIndex + 1}</span><strong {...languageProps(item.question)}>{item.question}</strong></summary><p {...languageProps(item.answer)}>{item.answer}</p></details>)}</div></section>
               <button className="secondary-button button-with-icon" type="button" onClick={appendAI}><NotebookPen size={14} />Append to my note</button>
             </> : <div className="ai-empty"><span><WandSparkles size={28} /></span><h3>No study pack yet</h3><p>Load captions or paste a transcript, choose your AI, and generate a summary, notes, mind map, practice tasks, and quiz.</p></div>}
           </article>

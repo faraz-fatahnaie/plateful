@@ -73,8 +73,9 @@ export async function getAuthenticatedUser(request: Request): Promise<Authentica
 
   const hostname = new URL(request.url).hostname;
   const developmentEmail = cleanEmail(bindings.DEV_AUTH_EMAIL);
-  if ((hostname === "localhost" || hostname === "127.0.0.1") && developmentEmail) {
-    return { email: developmentEmail, name: developmentEmail.split("@")[0], provider: "development" };
+  if (hostname === "localhost" || hostname === "127.0.0.1") {
+    const email = developmentEmail || "local-preview@localhost.test";
+    return { email, name: email.split("@")[0], provider: "development" };
   }
   return null;
 }

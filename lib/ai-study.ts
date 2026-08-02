@@ -17,10 +17,22 @@ export const artifactSchema = {
 type StudyInput = { title?: string; topic?: string; transcript?: string };
 type ArtifactBody = Omit<AIStudyArtifacts, "provider" | "model" | "generatedAt" | "transcriptSource">;
 
-export function buildStudyPrompt(input: StudyInput) {
+export type StudyPromptPresetId = "complete" | "summary" | "key-points" | "mind-map" | "practice";
+
+export const STUDY_PROMPT_PRESETS: Array<{ id: StudyPromptPresetId; label: string; description: string; instruction: string }> = [
+  { id: "complete", label: "Complete study pack", description: "Balanced summary, map, practice, and quiz", instruction: "Balance every part of the study pack." },
+  { id: "summary", label: "Clear summary", description: "Explain the lesson in a compact, memorable way", instruction: "Prioritize a clear, self-contained summary. Keep secondary sections useful but concise." },
+  { id: "key-points", label: "Important points", description: "Extract facts, commands, warnings, and takeaways", instruction: "Prioritize the most important points, exact commands, prerequisites, warnings, and common mistakes." },
+  { id: "mind-map", label: "Mind map", description: "Organize the topic into connected branches", instruction: "Prioritize a structured mind map with meaningful branches and short, specific child nodes." },
+  { id: "practice", label: "Practice & quiz", description: "Turn the episode into active recall", instruction: "Prioritize practical exercises and quiz questions that test understanding rather than recognition." },
+];
+
+export function buildStudyPrompt(input: StudyInput, preset: StudyPromptPresetId = "complete") {
+  const selectedPreset = STUDY_PROMPT_PRESETS.find((item) => item.id === preset) || STUDY_PROMPT_PRESETS[0];
   return [
     "You are a careful study-note editor.",
     "Analyze only the supplied transcript. Do not invent commands, facts, or video content.",
+    `Focus for this run: ${selectedPreset.instruction}`,
     "Create a concise summary, 5-8 key points, exact commands only when present, a 3-6 branch mind map, practical exercises, and 3 short quiz questions with answers.",
     "Return only valid JSON with these keys: summary, keyPoints, commands, mindMap, practice, quiz.",
     'mindMap items must be {"label":"...","children":["..."]}; quiz items must be {"question":"...","answer":"..."}.',

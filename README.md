@@ -84,13 +84,45 @@ See [SECURITY.md](SECURITY.md) before deploying or contributing.
 
 For self-hosted Google sign-in, follow [docs/GOOGLE_SIGN_IN.md](docs/GOOGLE_SIGN_IN.md).
 
+## Run with Docker on Windows
+
+The Compose setup runs the Cloudflare-compatible local worker and stores D1 in
+the named `plateful-data` volume. Page reloads, container restarts, image
+rebuilds, and `docker compose down` preserve playlists, progress, notes, and
+settings. The database tables are created automatically on first start.
+
+From PowerShell in the repository directory:
+
+```powershell
+Copy-Item .env.example .env
+notepad .env
+docker compose up --build --detach
+docker compose ps
+Start-Process "http://localhost:3000"
+```
+
+Set `DEV_AUTH_EMAIL` in `.env` to the email that should own local Docker data.
+The service binds to `127.0.0.1` by default, so other computers cannot reach it.
+
+Useful maintenance commands:
+
+```powershell
+docker compose logs --follow plateful
+docker compose restart plateful
+docker compose down
+```
+
+Do not run `docker compose down --volumes` unless you intentionally want to
+delete the local Plateful database.
+
 ## AI and email configuration
 
 - A ChatGPT Free/Plus/Pro account can be defined as an account-assisted
-  connection. Plateful copies a structured request, opens the user's signed-in
-  ChatGPT session, and validates the JSON pasted back. It never requests a
-  password or cookie. This path is manual because ChatGPT subscriptions and API
-  billing are separate.
+  connection. Choose one of five prompt presets, edit the prepared prompt, and
+  use **Copy prompt & open ChatGPT**. Plateful validates the JSON pasted back and
+  shows the summary, key points, commands, mind map, practice, and quiz. It never
+  requests a password or cookie. This path is manual because ChatGPT
+  subscriptions and API billing are separate.
 - Automatic connections support OpenAI, Anthropic, Google Gemini, OpenRouter,
   Ollama, LM Studio, and custom OpenAI-compatible endpoints.
 - Browser-entered API keys remain in memory. Self-hosted operators can instead

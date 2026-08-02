@@ -1,0 +1,31 @@
+services:
+  plateful:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: plateful:local
+    restart: unless-stopped
+    init: true
+    ports:
+      - "${PLATEFUL_BIND_ADDRESS:-127.0.0.1}:${PLATEFUL_PORT:-3000}:3000"
+    environment:
+      DEV_AUTH_EMAIL: "${DEV_AUTH_EMAIL:-local-preview@localhost.test}"
+      OPENAI_API_KEY: "${OPENAI_API_KEY:-}"
+      ANTHROPIC_API_KEY: "${ANTHROPIC_API_KEY:-}"
+      GEMINI_API_KEY: "${GEMINI_API_KEY:-}"
+      OPENROUTER_API_KEY: "${OPENROUTER_API_KEY:-}"
+      COMPATIBLE_AI_API_KEY: "${COMPATIBLE_AI_API_KEY:-}"
+      RESEND_API_KEY: "${RESEND_API_KEY:-}"
+      NOTIFICATION_FROM_EMAIL: "${NOTIFICATION_FROM_EMAIL:-Plateful <study@example.com>}"
+    volumes:
+      - plateful-data:/app/.wrangler/state
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 20s
+      timeout: 5s
+      start_period: 25s
+      retries: 5
+
+volumes:
+  plateful-data:
+    name: plateful-data
